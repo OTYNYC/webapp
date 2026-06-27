@@ -1,8 +1,45 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
-const churches = [
+interface Church {
+  borough: string;
+  name: string;
+  tradition: string;
+  languages: string;
+  priest: string;
+  website: string;
+  email: string;
+  phone: string;
+  map: string;
+  transit: string;
+  services: string[];
+}
+
+interface CalendarEvent {
+  title: string;
+  start: string;
+  end: string;
+}
+
+interface Moment {
+  id: string;
+  label: string;
+  title: string;
+  image: string;
+  alt: string;
+  details: string;
+}
+
+type EventStatus = "Now" | "Upcoming" | "Past";
+
+interface EventCard {
+  meta: string;
+  title: string;
+  body: string;
+}
+
+const churches: Church[] = [
   {
     borough: "Bronx",
     name: "Beata Le Mariam Ethiopian Orthodox Tewahedo Church",
@@ -104,7 +141,7 @@ const churches = [
   },
 ];
 
-const calendarEvents = [
+const calendarEvents: CalendarEvent[] = [
   { title: "Lidet (Nativity of Our Lord and Savior Jesus Christ)", start: "2026-01-07", end: "2026-01-07" },
   { title: "Ketera (Eve of Epiphany)", start: "2026-01-18", end: "2026-01-18" },
   { title: "Timket (Epiphany)", start: "2026-01-19", end: "2026-01-19" },
@@ -124,7 +161,7 @@ const calendarEvents = [
 
 const boroughs = ["All", "Bronx", "Brooklyn", "Manhattan", "Queens"];
 
-const moments = [
+const moments: Moment[] = [
   {
     id: "palm-sunday",
     label: "Palm Sunday | April 5, 2026",
@@ -150,8 +187,8 @@ export default function Home() {
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [selectedBorough, setSelectedBorough] = useState("All");
   const [query, setQuery] = useState("");
-  const [today, setToday] = useState(null);
-  const [selectedMoment, setSelectedMoment] = useState(null);
+  const [today, setToday] = useState<Date | null>(null);
+  const [selectedMoment, setSelectedMoment] = useState<Moment | null>(null);
   const [revealProgress, setRevealProgress] = useState(0);
 
   useEffect(() => {
@@ -171,7 +208,7 @@ export default function Home() {
     if (!selectedMoment) return undefined;
 
     const previousOverflow = document.body.style.overflow;
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setSelectedMoment(null);
     };
 
@@ -188,7 +225,7 @@ export default function Home() {
     let frame = 0;
 
     const updateReveal = () => {
-      const section = document.querySelector("[data-scroll-reveal]");
+      const section = document.querySelector<HTMLElement>("[data-scroll-reveal]");
       if (!section) return;
 
       const rect = section.getBoundingClientRect();
@@ -431,12 +468,14 @@ export default function Home() {
         <section
           className="orthodox-reveal"
           data-scroll-reveal
-          style={{
-            "--reveal-progress": revealProgress,
-            "--reveal-mask": `${Math.max(0, 18 - revealProgress * 18)}%`,
-            "--reveal-scale": 1.07 - revealProgress * 0.07,
-            "--icon-scale": 1 + revealProgress * 0.08,
-          }}
+          style={
+            {
+              "--reveal-progress": revealProgress,
+              "--reveal-mask": `${Math.max(0, 18 - revealProgress * 18)}%`,
+              "--reveal-scale": 1.07 - revealProgress * 0.07,
+              "--icon-scale": 1 + revealProgress * 0.08,
+            } as CSSProperties
+          }
           aria-labelledby="reveal-title"
         >
           <div className="cross-field" aria-hidden="true">
@@ -627,7 +666,7 @@ export default function Home() {
   );
 }
 
-function ChurchCard({ church }) {
+function ChurchCard({ church }: { church: Church }) {
   const phoneHref = church.phone ? `tel:${church.phone.replace(/[^+\d]/g, "")}` : "";
 
   return (
@@ -677,7 +716,7 @@ function ChurchCard({ church }) {
   );
 }
 
-function getEventCards(today) {
+function getEventCards(today: Date | null): EventCard[] {
   const current = today ? calendarEvents.find((event) => getStatus(event, today) === "Now") : null;
   const next = today ? calendarEvents.find((event) => toDate(event.start) >= today && getStatus(event, today) !== "Now") : null;
 
@@ -712,7 +751,7 @@ function getEventCards(today) {
   ];
 }
 
-function getStatus(event, today) {
+function getStatus(event: CalendarEvent, today: Date | null): EventStatus {
   if (!today) return "Upcoming";
 
   const start = toDate(event.start);
@@ -723,7 +762,7 @@ function getStatus(event, today) {
   return "Past";
 }
 
-function formatRange(event) {
+function formatRange(event: CalendarEvent): string {
   const start = toDate(event.start);
   const end = toDate(event.end);
   const sameDay = start.getTime() === end.getTime();
@@ -733,10 +772,10 @@ function formatRange(event) {
   return sameDay ? endText : `${startText}-${endText}`;
 }
 
-function toDate(value) {
+function toDate(value: string): Date {
   return startOfDay(new Date(`${value}T00:00:00`));
 }
 
-function startOfDay(date) {
+function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
