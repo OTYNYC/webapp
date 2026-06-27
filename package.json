@@ -1,0 +1,17 @@
+{
+  "name": "oty-nyc-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.14",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "preview": "python3 -m http.server 4173 --directory out"
+  },
+  "dependencies": {
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  }
+}
