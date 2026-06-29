@@ -12,7 +12,7 @@ export async function GET() {
   if (!authorized) return unauthorized();
 
   return NextResponse.json({
-    content: getEditableContent(),
+    content: await getEditableContent(),
     saveTarget: getSaveTarget(),
   });
 }
