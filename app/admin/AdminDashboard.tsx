@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import type { CalendarEvent, FeaturedEvent, Moment } from "../data";
 
 interface EditableContent {
@@ -287,7 +296,7 @@ export function AdminDashboard() {
                 <Input label="Time" value={event.time} onChange={(value) => updateFeaturedEvent(index, { time: value })} />
                 <Input label="Location" value={event.location} onChange={(value) => updateFeaturedEvent(index, { location: value })} />
                 <TextArea label="Summary" value={event.summary} onChange={(value) => updateFeaturedEvent(index, { summary: value })} />
-                <Input label="Image" value={event.image} onChange={(value) => updateFeaturedEvent(index, { image: value })} />
+                <ImageUpload label="Image" value={event.image} onChange={(value) => updateFeaturedEvent(index, { image: value })} />
                 <Input label="Alt Text" value={event.alt} onChange={(value) => updateFeaturedEvent(index, { alt: value })} />
               </EditorCard>
             ))}
@@ -379,7 +388,7 @@ export function AdminDashboard() {
                 <Input label="ID" value={moment.id} onChange={(value) => updateMoment(index, { id: slugify(value) })} />
                 <Input label="Label" value={moment.label} onChange={(value) => updateMoment(index, { label: value })} />
                 <Input label="Title" value={moment.title} onChange={(value) => updateMoment(index, { title: value })} />
-                <Input label="Image" value={moment.image} onChange={(value) => updateMoment(index, { image: value })} />
+                <ImageUpload label="Image" value={moment.image} onChange={(value) => updateMoment(index, { image: value })} />
                 <Input label="Alt Text" value={moment.alt} onChange={(value) => updateMoment(index, { alt: value })} />
                 <TextArea label="Details" value={moment.details} onChange={(value) => updateMoment(index, { details: value })} />
               </EditorCard>
@@ -464,6 +473,81 @@ function TextArea({ label, onChange, value }: { label: string; onChange: (value:
       <span>{label}</span>
       <textarea value={value} rows={4} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value)} />
     </label>
+  );
+}
+
+function ImageUpload({ label, onChange, value }: { label: string; onChange: (value: string) => void; value: string }) {
+  const [dragActive, setDragActive] = useState(false);
+  const [message, setMessage] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  const uploadFile = async (file: File | undefined) => {
+    if (!file) return;
+
+    setMessage("");
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/admin/uploads", {
+      method: "POST",
+      body: formData,
+    });
+    const payload = (await response.json().catch(() => ({}))) as { message?: string; mode?: string; path?: string };
+
+    setUploading(false);
+
+    if (!response.ok || !payload.path) {
+      setMessage(payload.message || "Image could not be uploaded.");
+      return;
+    }
+
+    onChange(payload.path);
+    setMessage(payload.mode === "github" ? "Uploaded to GitHub. Save changes to use it on the site." : "Uploaded locally.");
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setDragActive(true);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setDragActive(false);
+    void uploadFile(event.dataTransfer.files.item(0) || undefined);
+  };
+
+  return (
+    <div className="admin-field admin-field-wide">
+      <span>{label}</span>
+      <label
+        className={`admin-upload${dragActive ? " drag-active" : ""}${uploading ? " uploading" : ""}`}
+        onDragLeave={() => setDragActive(false)}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        {value ? <img src={value} alt="" /> : <div className="admin-upload-placeholder">Image</div>}
+        <div className="admin-upload-copy">
+          <strong>{uploading ? "Uploading image" : "Drop image here or choose a file"}</strong>
+          <small>JPG, PNG, WebP, AVIF, or GIF. 8 MB max.</small>
+        </div>
+        <input
+          type="file"
+          accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
+          disabled={uploading}
+          onChange={(event) => void uploadFile(event.target.files?.item(0) || undefined)}
+        />
+      </label>
+      <input
+        className="admin-image-path"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="/assets/uploads/image.jpg"
+        aria-label={`${label} path or URL`}
+      />
+      {message && <p className="admin-upload-message">{message}</p>}
+    </div>
   );
 }
 

@@ -1803,6 +1803,90 @@ section[id],
   resize: vertical;
 }
 
+.admin-upload {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.28fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+  min-height: 8.5rem;
+  border: 1px dashed rgba(39, 95, 84, 0.38);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  background: #fffdf8;
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.admin-upload:hover,
+.admin-upload:focus-within,
+.admin-upload.drag-active {
+  border-color: var(--green);
+  background: #eef7ef;
+  box-shadow: 0 12px 32px rgba(39, 95, 84, 0.08);
+}
+
+.admin-upload.uploading {
+  opacity: 0.68;
+  cursor: wait;
+}
+
+.admin-upload img,
+.admin-upload-placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius);
+  object-fit: cover;
+  background: var(--surface-warm);
+}
+
+.admin-upload-placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  font-weight: 950;
+}
+
+.admin-upload-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.admin-upload-copy strong {
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.admin-upload-copy small,
+.admin-upload-message {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.admin-upload input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.admin-upload input[type="file"]:disabled {
+  cursor: wait;
+}
+
+.admin-image-path {
+  margin-top: 0.55rem;
+}
+
+.admin-upload-message {
+  margin: 0.35rem 0 0;
+  font-weight: 800;
+}
+
 .admin-field input:focus,
 .admin-field textarea:focus {
   outline: 3px solid rgba(218, 165, 54, 0.24);
@@ -2209,6 +2293,10 @@ section[id],
   }
 
   .admin-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-upload {
     grid-template-columns: 1fr;
   }
 

@@ -1,6 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { calendarEvents, featuredEvents, moments, type CalendarEvent, type FeaturedEvent, type Moment } from "../data";
+import { getGithubConfig, saveFilesToGithub } from "./githubContent";
 
 export interface EditableContent {
   featuredEvents: FeaturedEvent[];
@@ -11,23 +12,6 @@ export interface EditableContent {
 interface ContentFile {
   path: string;
   data: unknown;
-}
-
-interface GithubReference {
-  object: {
-    sha: string;
-  };
-}
-
-interface GithubCommit {
-  sha: string;
-  tree: {
-    sha: string;
-  };
-}
-
-interface GithubTree {
-  sha: string;
 }
 
 export function getEditableContent(): EditableContent {
@@ -64,7 +48,14 @@ export async function saveEditableContent(content: EditableContent) {
   const githubConfig = getGithubConfig();
 
   if (githubConfig) {
-    await saveFilesToGithub(files, githubConfig);
+    await saveFilesToGithub(
+      files.map((file) => ({
+        content: serializeJson(file.data),
+        path: file.path,
+      })),
+      githubConfig,
+      "Update site content from admin",
+    );
 
     return { mode: "github", files: files.map((file) => file.path) };
   }
@@ -168,77 +159,4 @@ function requireImagePath(input: unknown, label: string) {
 
 function serializeJson(data: unknown) {
   return `${JSON.stringify(data, null, 2)}\n`;
-}
-
-function getGithubConfig() {
-  const token = process.env.GITHUB_CONTENT_TOKEN;
-  const repo =
-    process.env.GITHUB_CONTENT_REPO ||
-    (process.env.VERCEL_GIT_REPO_OWNER && process.env.VERCEL_GIT_REPO_SLUG
-      ? `${process.env.VERCEL_GIT_REPO_OWNER}/${process.env.VERCEL_GIT_REPO_SLUG}`
-      : "");
-
-  if (!token || !repo) return null;
-
-  return {
-    branch: process.env.GITHUB_CONTENT_BRANCH || process.env.VERCEL_GIT_COMMIT_REF || "main",
-    repo,
-    token,
-  };
-}
-
-async function saveFilesToGithub(files: ContentFile[], config: NonNullable<ReturnType<typeof getGithubConfig>>) {
-  const ref = await githubRequest<GithubReference>(config, `git/ref/heads/${config.branch}`);
-  const baseCommit = await githubRequest<GithubCommit>(config, `git/commits/${ref.object.sha}`);
-  const tree = await githubRequest<GithubTree>(config, "git/trees", {
-    method: "POST",
-    body: JSON.stringify({
-      base_tree: baseCommit.tree.sha,
-      tree: files.map((file) => ({
-        content: serializeJson(file.data),
-        mode: "100644",
-        path: file.path,
-        type: "blob",
-      })),
-    }),
-  });
-  const commit = await githubRequest<GithubCommit>(config, "git/commits", {
-    method: "POST",
-    body: JSON.stringify({
-      message: "Update site content from admin",
-      parents: [ref.object.sha],
-      tree: tree.sha,
-    }),
-  });
-
-  await githubRequest(config, `git/refs/heads/${config.branch}`, {
-    method: "PATCH",
-    body: JSON.stringify({ force: false, sha: commit.sha }),
-  });
-}
-
-async function githubRequest<T = unknown>(
-  config: NonNullable<ReturnType<typeof getGithubConfig>>,
-  path: string,
-  init: RequestInit = {},
-) {
-  const response = await fetch(`https://api.github.com/repos/${config.repo}/${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${config.token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "oty-nyc-admin",
-      "X-GitHub-Api-Version": "2022-11-28",
-      ...init.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const details = await response.text();
-
-    throw new Error(`GitHub request failed (${response.status}): ${details.slice(0, 240)}`);
-  }
-
-  return (await response.json()) as T;
 }

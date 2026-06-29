@@ -39,6 +39,9 @@ Optional environment variables:
 When GitHub content variables are present, saving in `/admin` commits the JSON content files under `content/`.
 If the repo is connected to Vercel, that commit starts a new deployment automatically.
 
+Admin image uploads are saved under `public/assets/uploads/`. In production, uploads also use `GITHUB_CONTENT_TOKEN`
+to commit the image file to GitHub before the content form is saved.
+
 ## Deployment
 
 This should deploy on Vercel as a Next.js project so the admin API routes can run.
