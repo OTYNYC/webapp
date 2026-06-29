@@ -5,12 +5,14 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type DragEvent,
   type FormEvent,
   type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
 import type { CalendarEvent, FeaturedEvent, Moment } from "../data";
 
 interface EditableContent {
@@ -38,11 +40,16 @@ export function AdminDashboard() {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"checking" | "signed-out" | "ready">("checking");
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
+  const contentRef = useRef<EditableContent | null>(null);
 
   const contentCount = useMemo(() => {
     if (!content) return "";
 
     return `${content.featuredEvents.length} featured, ${content.calendarEvents.length} calendar, ${content.moments.length} moments`;
+  }, [content]);
+
+  useEffect(() => {
+    contentRef.current = content;
   }, [content]);
 
   const loadContent = useCallback(async () => {
@@ -102,7 +109,8 @@ export function AdminDashboard() {
   };
 
   const save = async () => {
-    if (!content) return;
+    const latestContent = contentRef.current;
+    if (!latestContent) return;
     if (activeUploads > 0) {
       setMessage("Wait for image uploads to finish before saving.");
       return;
@@ -114,7 +122,7 @@ export function AdminDashboard() {
     const response = await fetch("/api/admin/content", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(content),
+      body: JSON.stringify(latestContent),
     });
     const payload = (await response.json().catch(() => ({}))) as { content?: EditableContent; message?: string; mode?: string };
 
@@ -141,6 +149,20 @@ export function AdminDashboard() {
     );
   };
 
+  const updateFeaturedEventById = (id: string, patch: Partial<FeaturedEvent>) => {
+    setContent((current) => {
+      const next = current
+        ? {
+            ...current,
+            featuredEvents: current.featuredEvents.map((event) => (event.id === id ? { ...event, ...patch } : event)),
+          }
+        : current;
+
+      contentRef.current = next;
+      return next;
+    });
+  };
+
   const updateCalendarEvent = (index: number, patch: Partial<CalendarEvent>) => {
     setContent((current) =>
       current
@@ -163,6 +185,20 @@ export function AdminDashboard() {
     );
   };
 
+  const updateMomentById = (id: string, patch: Partial<Moment>) => {
+    setContent((current) => {
+      const next = current
+        ? {
+            ...current,
+            moments: current.moments.map((moment) => (moment.id === id ? { ...moment, ...patch } : moment)),
+          }
+        : current;
+
+      contentRef.current = next;
+      return next;
+    });
+  };
+
   const addFeaturedEvent = () => {
     const id = uniqueId("featured-event");
 
@@ -180,8 +216,8 @@ export function AdminDashboard() {
                 time: "",
                 location: "",
                 summary: "Add the event summary.",
-                image: "/assets/community-gathering.jpeg",
-                alt: "OTY NYC community gathering",
+                image: "",
+                alt: "OTY NYC event image",
                 published: true,
               },
             ],
@@ -228,8 +264,8 @@ export function AdminDashboard() {
                 id,
                 label: "New Moment",
                 title: "New community moment",
-                image: "/assets/community-gathering.jpeg",
-                alt: "OTY NYC community gathering",
+                image: "",
+                alt: "OTY NYC community moment image",
                 details: "Add the moment details.",
                 published: true,
               },
@@ -375,7 +411,7 @@ export function AdminDashboard() {
                 <ImageUpload
                   label="Image"
                   value={event.image}
-                  onChange={(value) => updateFeaturedEvent(index, { image: value })}
+                  onChange={(value) => updateFeaturedEventById(event.id, { image: value })}
                   onUploadingChange={(uploading) => setActiveUploads((count) => Math.max(0, count + (uploading ? 1 : -1)))}
                 />
                 <Input label="Alt Text" value={event.alt} onChange={(value) => updateFeaturedEvent(index, { alt: value })} />
@@ -437,7 +473,7 @@ export function AdminDashboard() {
                 <ImageUpload
                   label="Image"
                   value={moment.image}
-                  onChange={(value) => updateMoment(index, { image: value })}
+                  onChange={(value) => updateMomentById(moment.id, { image: value })}
                   onUploadingChange={(uploading) => setActiveUploads((count) => Math.max(0, count + (uploading ? 1 : -1)))}
                 />
                 <Input label="Alt Text" value={moment.alt} onChange={(value) => updateMoment(index, { alt: value })} />
@@ -573,7 +609,7 @@ function ImageUpload({
         onUploadProgress: (event) => setProgress(event.percentage),
       });
 
-      onChange(blob.url);
+      flushSync(() => onChange(blob.url));
       setMessage("Uploaded directly to Vercel Blob and updated this image field. Save changes to publish it.");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message.replace(/^Vercel Blob:\s*/, "") : "Image could not be uploaded.";
