@@ -1,5 +1,6 @@
 "use client";
 
+import { upload } from "@vercel/blob/client";
 import {
   useCallback,
   useEffect,
@@ -121,7 +122,7 @@ export function AdminDashboard() {
 
     setContent(payload.content);
     setSaveTarget(payload.mode || saveTarget);
-    setMessage(payload.mode === "github" ? "Saved to GitHub. Deployment will start from the new commit." : "Saved locally.");
+    setMessage(payload.mode === "vercel-blob" ? "Saved to Vercel Blob. The public site will use the update now." : "Saved locally.");
   };
 
   const updateFeaturedEvent = (index: number, patch: Partial<FeaturedEvent>) => {
@@ -516,32 +517,44 @@ function TextArea({ label, onChange, value }: { label: string; onChange: (value:
 function ImageUpload({ label, onChange, value }: { label: string; onChange: (value: string) => void; value: string }) {
   const [dragActive, setDragActive] = useState(false);
   const [message, setMessage] = useState("");
+  const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
 
   const uploadFile = async (file: File | undefined) => {
     if (!file) return;
 
-    setMessage("");
-    setUploading(true);
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch("/api/admin/uploads", {
-      method: "POST",
-      body: formData,
-    });
-    const payload = (await response.json().catch(() => ({}))) as { message?: string; mode?: string; path?: string };
-
-    setUploading(false);
-
-    if (!response.ok || !payload.path) {
-      setMessage(payload.message || "Image could not be uploaded.");
+    if (!allowedImageTypes.includes(file.type)) {
+      setMessage("Upload a JPG, PNG, WebP, AVIF, or GIF image.");
       return;
     }
 
-    onChange(payload.path);
-    setMessage(payload.mode === "github" ? "Uploaded to GitHub. Save changes to use it on the site." : "Uploaded locally.");
+    if (file.size > maxUploadBytes) {
+      setMessage("Images must be 25 MB or smaller.");
+      return;
+    }
+
+    setMessage("");
+    setProgress(0);
+    setUploading(true);
+
+    try {
+      const blob = await upload(uploadPathFor(file), file, {
+        access: "public",
+        contentType: file.type,
+        handleUploadUrl: "/api/admin/uploads",
+        multipart: file.size > multipartThresholdBytes,
+        onUploadProgress: (event) => setProgress(event.percentage),
+      });
+
+      onChange(blob.url);
+      setMessage("Uploaded directly to Vercel Blob. Save changes to use it on the site.");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message.replace(/^Vercel Blob:\s*/, "") : "Image could not be uploaded.";
+
+      setMessage(errorMessage || "Image could not be uploaded.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDragOver = (event: DragEvent<HTMLLabelElement>) => {
@@ -567,7 +580,7 @@ function ImageUpload({ label, onChange, value }: { label: string; onChange: (val
         {value ? <img src={value} alt="" /> : <div className="admin-upload-placeholder">Image</div>}
         <div className="admin-upload-copy">
           <strong>{uploading ? "Uploading image" : "Drop image here or choose a file"}</strong>
-          <small>JPG, PNG, WebP, AVIF, or GIF. 8 MB max.</small>
+          <small>{uploading ? `${Math.round(progress)}% uploaded` : "JPG, PNG, WebP, AVIF, or GIF. 25 MB max."}</small>
         </div>
         <input
           type="file"
@@ -586,6 +599,31 @@ function ImageUpload({ label, onChange, value }: { label: string; onChange: (val
       {message && <p className="admin-upload-message">{message}</p>}
     </div>
   );
+}
+
+const allowedImageTypes = ["image/avif", "image/gif", "image/jpeg", "image/png", "image/webp"];
+const maxUploadBytes = 25 * 1024 * 1024;
+const multipartThresholdBytes = 4 * 1024 * 1024;
+
+function uploadPathFor(file: File) {
+  const extension = extensionFor(file);
+  const name = file.name
+    .replace(/\.[^.]+$/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 64);
+
+  return `uploads/${Date.now()}-${name || "upload"}.${extension}`;
+}
+
+function extensionFor(file: File) {
+  if (file.type === "image/avif") return "avif";
+  if (file.type === "image/gif") return "gif";
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/webp") return "webp";
+
+  return "jpg";
 }
 
 function updateItem<T>(items: T[], index: number, patch: Partial<T>) {
@@ -625,7 +663,7 @@ function todayInputValue() {
 }
 
 function saveTargetLabel(target: string) {
-  if (target === "github") return "GitHub publishing";
+  if (target === "vercel-blob") return "Vercel Blob publishing";
   if (target === "local-dev") return "Local saving";
 
   return "Publishing not configured";

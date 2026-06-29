@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { calendarEvents } from "../data";
+import type { CalendarEvent } from "../data";
 import { formatRange, getStatus, startOfDay } from "../lib/calendar";
 
-export function CalendarHighlights() {
+export function CalendarHighlights({ events }: { events: CalendarEvent[] }) {
   const [today, setToday] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export function CalendarHighlights() {
 
   return (
     <div className="calendar-list">
-      {calendarEvents.map((event) => {
+      {events.map((event) => {
         const status = getStatus(event, today);
         const statusClass = status === "Now" ? "status-now" : status === "Upcoming" ? "status-upcoming" : "status-past";
 

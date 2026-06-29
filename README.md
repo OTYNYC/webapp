@@ -28,19 +28,22 @@ Required environment variables:
 
 - `ADMIN_PASSWORD`: password for admin sign-in
 - `ADMIN_SESSION_SECRET`: secret used to sign the admin session cookie
+- `BLOB_READ_WRITE_TOKEN`: Vercel Blob token for runtime content and image storage
 
 Optional environment variables:
 
 - `ADMIN_USERNAME`: require a specific username in addition to the password
-- `GITHUB_CONTENT_TOKEN`: GitHub token with repository contents read/write access
-- `GITHUB_CONTENT_REPO`: repository in `owner/repo` format, if it cannot be inferred from Vercel
-- `GITHUB_CONTENT_BRANCH`: branch to commit content updates to, defaults to the Vercel branch or `main`
 
-When GitHub content variables are present, saving in `/admin` commits the JSON content files under `content/`.
-If the repo is connected to Vercel, that commit starts a new deployment automatically.
+When `BLOB_READ_WRITE_TOKEN` is present, saving in `/admin` writes the editable content to Vercel Blob at
+`content/site-content.json`. The public homepage and calendar page read from Blob at request time, so admin edits do
+not create GitHub commits or trigger full redeployments.
 
-Admin image uploads are saved under `public/assets/uploads/`. In production, uploads also use `GITHUB_CONTENT_TOKEN`
-to commit the image file to GitHub before the content form is saved.
+Admin image uploads use direct browser-to-Blob uploads. The admin API verifies the signed-in session and issues a
+short-lived upload token, then the browser sends the image directly to Vercel Blob. Images are saved as public Blob
+files and are capped at 25 MB.
+
+Local development without Blob credentials falls back to the checked-in JSON files for content. Image uploads require
+Blob credentials.
 
 ## Deployment
 
