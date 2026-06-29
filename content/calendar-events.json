@@ -1,0 +1,92 @@
+[
+  {
+    "id": "lidet",
+    "title": "Lidet (Nativity of Our Lord and Savior Jesus Christ)",
+    "start": "2026-01-07",
+    "end": "2026-01-07"
+  },
+  {
+    "id": "ketera",
+    "title": "Ketera (Eve of Epiphany)",
+    "start": "2026-01-18",
+    "end": "2026-01-18"
+  },
+  {
+    "id": "timket",
+    "title": "Timket (Epiphany)",
+    "start": "2026-01-19",
+    "end": "2026-01-19"
+  },
+  {
+    "id": "cana-of-galilee",
+    "title": "Cana of Galilee",
+    "start": "2026-01-20",
+    "end": "2026-01-20"
+  },
+  {
+    "id": "fast-of-nineveh",
+    "title": "Fast of Nineveh",
+    "start": "2026-02-02",
+    "end": "2026-02-04"
+  },
+  {
+    "id": "abiy-tsom",
+    "title": "Abiy Tsom (Great Lent Fast)",
+    "start": "2026-02-18",
+    "end": "2026-04-12"
+  },
+  {
+    "id": "debre-zeit",
+    "title": "Debre Zeit (Midway marker of Great Lent Fast)",
+    "start": "2026-03-15",
+    "end": "2026-03-15"
+  },
+  {
+    "id": "hosanna",
+    "title": "Hosanna (Palm Sunday)",
+    "start": "2026-04-05",
+    "end": "2026-04-05"
+  },
+  {
+    "id": "good-friday",
+    "title": "Good Friday",
+    "start": "2026-04-10",
+    "end": "2026-04-10"
+  },
+  {
+    "id": "orthodox-easter",
+    "title": "Orthodox Easter",
+    "start": "2026-04-12",
+    "end": "2026-04-12"
+  },
+  {
+    "id": "irget",
+    "title": "Irget (Ascension of Our Lord and Savior Jesus Christ)",
+    "start": "2026-05-21",
+    "end": "2026-05-21"
+  },
+  {
+    "id": "peraklitos",
+    "title": "Peraklitos (Pentecost)",
+    "start": "2026-05-31",
+    "end": "2026-05-31"
+  },
+  {
+    "id": "tsome-hawariyat",
+    "title": "Tsome Hawariyat (Fast of the Apostles)",
+    "start": "2026-06-01",
+    "end": "2026-07-12"
+  },
+  {
+    "id": "tsome-filseta",
+    "title": "Tsome Filseta (Fast of the Assumption of Our Lady Mary)",
+    "start": "2026-08-07",
+    "end": "2026-08-22"
+  },
+  {
+    "id": "debre-tabor",
+    "title": "Debre Tabor (Transfiguration of Our Lord and Savior Jesus Christ)",
+    "start": "2026-08-19",
+    "end": "2026-08-19"
+  }
+]

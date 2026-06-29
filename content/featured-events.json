@@ -1,0 +1,14 @@
+[
+  {
+    "id": "holy-matrimony-panel",
+    "label": "Featured Event",
+    "title": "Holy Matrimony Panel",
+    "date": "2026-06-27",
+    "time": "2:00 PM",
+    "location": "241 E 62nd Street, New York, NY",
+    "summary": "Saturday, June 27, 2026 at 2:00 PM. A community discussion at 241 E 62nd Street, New York, NY.",
+    "image": "/assets/holy-matrimony-panel.avif",
+    "alt": "Holy Matrimony Panel event poster",
+    "published": true
+  }
+]

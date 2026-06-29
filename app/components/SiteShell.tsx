@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 const navItems = [
   { label: "Mission", href: "/#mission", activePath: "" },
@@ -16,6 +16,9 @@ export function SiteShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
   const [headerScrolled, setHeaderScrolled] = useState(false);
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const lastScrollY = useRef(0);
+  const navOpenRef = useRef(false);
   const solidHeader = pathname !== "/" || headerScrolled || navOpen;
 
   useEffect(() => {
@@ -23,8 +26,31 @@ export function SiteShell({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
-    const updateHeader = () => setHeaderScrolled(window.scrollY > 20);
+    navOpenRef.current = navOpen;
+    if (navOpen) setHeaderHidden(false);
+  }, [navOpen]);
 
+  useEffect(() => {
+    const updateHeader = () => {
+      const currentScrollY = window.scrollY;
+      const scrollDelta = currentScrollY - lastScrollY.current;
+
+      setHeaderScrolled(currentScrollY > 20);
+
+      if (navOpenRef.current || currentScrollY < 80) {
+        setHeaderHidden(false);
+      } else if (scrollDelta > 8) {
+        setHeaderHidden(true);
+      } else if (scrollDelta < -8) {
+        setHeaderHidden(false);
+      }
+
+      if (Math.abs(scrollDelta) > 4) {
+        lastScrollY.current = currentScrollY;
+      }
+    };
+
+    lastScrollY.current = window.scrollY;
     updateHeader();
     window.addEventListener("scroll", updateHeader, { passive: true });
 
@@ -37,7 +63,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
 
-      <header className={`site-header${solidHeader ? " scrolled" : ""}`}>
+      <header className={`site-header${solidHeader ? " scrolled" : ""}${headerHidden ? " hidden" : ""}`}>
         <Link className="brand" href="/" aria-label="OTY NYC home">
           <img src="/assets/oty-logo.png" alt="OTY NYC logo" width="64" height="56" />
           <span>

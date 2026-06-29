@@ -8,19 +8,41 @@ A Bun-managed Next.js site for Orthodox Tewahedo Youth in New York City.
 bun run dev
 ```
 
-## Static Build
+## Build
 
 ```sh
 bun run build
 ```
 
-The static export output is `out/`.
+Run the production server after a build with:
+
+```sh
+bun run preview
+```
+
+## Admin Publishing
+
+The admin dashboard lives at `/admin`. It has sign-in only; there is no public account creation.
+
+Required environment variables:
+
+- `ADMIN_PASSWORD`: password for admin sign-in
+- `ADMIN_SESSION_SECRET`: secret used to sign the admin session cookie
+
+Optional environment variables:
+
+- `ADMIN_USERNAME`: require a specific username in addition to the password
+- `GITHUB_CONTENT_TOKEN`: GitHub token with repository contents read/write access
+- `GITHUB_CONTENT_REPO`: repository in `owner/repo` format, if it cannot be inferred from Vercel
+- `GITHUB_CONTENT_BRANCH`: branch to commit content updates to, defaults to the Vercel branch or `main`
+
+When GitHub content variables are present, saving in `/admin` commits the JSON content files under `content/`.
+If the repo is connected to Vercel, that commit starts a new deployment automatically.
 
 ## Deployment
 
-This can deploy on Vercel as a Next.js project. Because `next.config.mjs` uses `output: "export"`, the same build can also deploy as static files on Netlify, Cloudflare Pages, GitHub Pages, or any static host.
+This should deploy on Vercel as a Next.js project so the admin API routes can run.
 
 - Build command: `bun run build`
-- Output directory: `out`
 
 Vercel can also detect the Next.js app automatically from `package.json` and `bun.lock`.

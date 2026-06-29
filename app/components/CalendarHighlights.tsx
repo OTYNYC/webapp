@@ -18,7 +18,7 @@ export function CalendarHighlights() {
         const statusClass = status === "Now" ? "status-now" : status === "Upcoming" ? "status-upcoming" : "status-past";
 
         return (
-          <article className="calendar-item" key={event.title}>
+          <article className="calendar-item" key={event.id}>
             <div className="calendar-date">{formatRange(event)}</div>
             <h3>{event.title}</h3>
             <span className={`calendar-status ${statusClass}`}>{status}</span>
