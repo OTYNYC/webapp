@@ -34,7 +34,7 @@ Optional environment variables:
 
 - `ADMIN_USERNAME`: require a specific username in addition to the password
 
-When `BLOB_READ_WRITE_TOKEN` is present, saving in `/admin` writes the editable content to Vercel Blob at
+When `BLOB_READ_WRITE_TOKEN` is present, saving in `/admin` writes the editable public site content to Vercel Blob at
 `content/site-content.json`. The public homepage and calendar page read from Blob at request time, so admin edits do
 not create GitHub commits or trigger full redeployments.
 

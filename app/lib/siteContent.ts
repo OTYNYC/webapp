@@ -25,7 +25,7 @@ export async function loadSiteContent(): Promise<EditableContent> {
   if (!hasBlobStorage()) return getFallbackSiteContent();
 
   try {
-    const result = await get(SITE_CONTENT_BLOB_PATH, { access: "private" });
+    const result = await get(SITE_CONTENT_BLOB_PATH, { access: "public" });
     if (!result?.stream) return getFallbackSiteContent();
 
     const content = await streamToText(result.stream);
@@ -42,7 +42,7 @@ export async function saveSiteContent(content: EditableContent) {
   }
 
   await put(SITE_CONTENT_BLOB_PATH, serializeJson(content), {
-    access: "private",
+    access: "public",
     allowOverwrite: true,
     cacheControlMaxAge: 60,
     contentType: "application/json",
