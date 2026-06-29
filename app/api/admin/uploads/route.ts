@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
-const allowedTypes = ["image/avif", "image/gif", "image/jpeg", "image/png", "image/webp"];
+const allowedTypes = ["image/avif", "image/gif", "image/jpeg", "image/jpg", "image/pjpeg", "image/png", "image/webp"];
 
 export async function POST(request: NextRequest) {
   try {
