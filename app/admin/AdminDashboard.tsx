@@ -35,6 +35,7 @@ export function AdminDashboard() {
   const [saveTarget, setSaveTarget] = useState("");
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"checking" | "signed-out" | "ready">("checking");
+  const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
 
   const contentCount = useMemo(() => {
     if (!content) return "";
@@ -156,6 +157,97 @@ export function AdminDashboard() {
     );
   };
 
+  const addFeaturedEvent = () => {
+    const id = uniqueId("featured-event");
+
+    setContent((current) =>
+      current
+        ? {
+            ...current,
+            featuredEvents: [
+              ...current.featuredEvents,
+              {
+                id,
+                label: "Featured Event",
+                title: "New featured event",
+                date: todayInputValue(),
+                time: "",
+                location: "",
+                summary: "Add the event summary.",
+                image: "/assets/community-gathering.jpeg",
+                alt: "OTY NYC community gathering",
+                published: true,
+              },
+            ],
+          }
+        : current,
+    );
+    setActiveTab("featured");
+    setPendingFocusId(id);
+  };
+
+  const addCalendarEvent = () => {
+    const id = uniqueId("calendar-event");
+
+    setContent((current) =>
+      current
+        ? {
+            ...current,
+            calendarEvents: [
+              ...current.calendarEvents,
+              {
+                id,
+                title: "New calendar event",
+                start: todayInputValue(),
+                end: todayInputValue(),
+              },
+            ],
+          }
+        : current,
+    );
+    setActiveTab("calendar");
+    setPendingFocusId(id);
+  };
+
+  const addMoment = () => {
+    const id = uniqueId("moment");
+
+    setContent((current) =>
+      current
+        ? {
+            ...current,
+            moments: [
+              ...current.moments,
+              {
+                id,
+                label: "New Moment",
+                title: "New community moment",
+                image: "/assets/community-gathering.jpeg",
+                alt: "OTY NYC community gathering",
+                details: "Add the moment details.",
+                published: true,
+              },
+            ],
+          }
+        : current,
+    );
+    setActiveTab("moments");
+    setPendingFocusId(id);
+  };
+
+  useEffect(() => {
+    if (!pendingFocusId) return;
+
+    const card = document.querySelector<HTMLElement>(`[data-card-id="${pendingFocusId}"]`);
+    if (!card) return;
+
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card
+      .querySelector<HTMLInputElement | HTMLTextAreaElement>('input:not([type="checkbox"]):not([type="file"]), textarea')
+      ?.focus({ preventScroll: true });
+    setPendingFocusId(null);
+  }, [pendingFocusId, content]);
+
   if (status === "checking") {
     return (
       <main className="subpage-main admin-main" id="main">
@@ -240,34 +332,12 @@ export function AdminDashboard() {
         {content && activeTab === "featured" && (
           <ContentSection
             title="Featured Events"
-            onAdd={() =>
-              setContent((current) =>
-                current
-                  ? {
-                      ...current,
-                      featuredEvents: [
-                        ...current.featuredEvents,
-                        {
-                          id: uniqueId("featured-event"),
-                          label: "Featured Event",
-                          title: "New featured event",
-                          date: todayInputValue(),
-                          time: "",
-                          location: "",
-                          summary: "Add the event summary.",
-                          image: "/assets/community-gathering.jpeg",
-                          alt: "OTY NYC community gathering",
-                          published: true,
-                        },
-                      ],
-                    }
-                  : current,
-              )
-            }
+            onAdd={addFeaturedEvent}
           >
             {content.featuredEvents.map((event, index) => (
               <EditorCard
                 key={event.id}
+                itemId={event.id}
                 title={event.title}
                 onDelete={() =>
                   setContent((current) =>
@@ -306,28 +376,12 @@ export function AdminDashboard() {
         {content && activeTab === "calendar" && (
           <ContentSection
             title="Calendar Events"
-            onAdd={() =>
-              setContent((current) =>
-                current
-                  ? {
-                      ...current,
-                      calendarEvents: [
-                        ...current.calendarEvents,
-                        {
-                          id: uniqueId("calendar-event"),
-                          title: "New calendar event",
-                          start: todayInputValue(),
-                          end: todayInputValue(),
-                        },
-                      ],
-                    }
-                  : current,
-              )
-            }
+            onAdd={addCalendarEvent}
           >
             {content.calendarEvents.map((event, index) => (
               <EditorCard
                 key={event.id}
+                itemId={event.id}
                 title={event.title}
                 onDelete={() =>
                   setContent((current) => (current ? { ...current, calendarEvents: removeItem(current.calendarEvents, index) } : current))
@@ -351,31 +405,12 @@ export function AdminDashboard() {
         {content && activeTab === "moments" && (
           <ContentSection
             title="Community Moments"
-            onAdd={() =>
-              setContent((current) =>
-                current
-                  ? {
-                      ...current,
-                      moments: [
-                        ...current.moments,
-                        {
-                          id: uniqueId("moment"),
-                          label: "New Moment",
-                          title: "New community moment",
-                          image: "/assets/community-gathering.jpeg",
-                          alt: "OTY NYC community gathering",
-                          details: "Add the moment details.",
-                          published: true,
-                        },
-                      ],
-                    }
-                  : current,
-              )
-            }
+            onAdd={addMoment}
           >
             {content.moments.map((moment, index) => (
               <EditorCard
                 key={moment.id}
+                itemId={moment.id}
                 title={moment.title}
                 onDelete={() => setContent((current) => (current ? { ...current, moments: removeItem(current.moments, index) } : current))}
                 onMoveDown={() => setContent((current) => (current ? { ...current, moments: moveItem(current.moments, index, 1) } : current))}
@@ -416,19 +451,21 @@ function ContentSection({ children, onAdd, title }: { children: ReactNode; onAdd
 
 function EditorCard({
   children,
+  itemId,
   onDelete,
   onMoveDown,
   onMoveUp,
   title,
 }: {
   children: ReactNode;
+  itemId: string;
   onDelete: () => void;
   onMoveDown: () => void;
   onMoveUp: () => void;
   title: string;
 }) {
   return (
-    <article className="admin-card">
+    <article className="admin-card" data-card-id={itemId}>
       <header>
         <h3>{title}</h3>
         <div>
