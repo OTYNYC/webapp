@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { MomentsCarousel } from "./components/MomentsCarousel";
 import type { CalendarEvent, FeaturedEvent, Moment } from "./data";
 import { formatRange, getStatus, startOfDay, toDate } from "./lib/calendar";
@@ -82,7 +82,7 @@ export function HomeClient({ content }: HomeClientProps) {
   }, []);
 
   const cards = useMemo(() => getEventCards(today, calendarEvents), [calendarEvents, today]);
-  const featuredEvent = useMemo(() => getFeaturedEvent(today, featuredEvents), [featuredEvents, today]);
+  const visibleFeaturedEvents = useMemo(() => getFeaturedEvents(featuredEvents), [featuredEvents]);
   const visibleMoments = useMemo(() => moments.filter((moment) => moment.published), [moments]);
 
   return (
@@ -139,7 +139,7 @@ export function HomeClient({ content }: HomeClientProps) {
             </Link>
           </div>
           <div className="current-layout">
-            <FeaturedEventCard event={featuredEvent} today={today} />
+            <FeaturedEventsCarousel events={visibleFeaturedEvents} today={today} />
             <div className="event-grid" aria-live="polite">
               {cards.map((card) => (
                 <article className="event-card" key={`${card.meta}-${card.title}`}>
@@ -340,7 +340,73 @@ export function HomeClient({ content }: HomeClientProps) {
   );
 }
 
+function FeaturedEventsCarousel({ events, today }: { events: FeaturedEvent[]; today: Date | null }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const goTo = (index: number) => {
+    const nextIndex = Math.min(Math.max(index, 0), events.length - 1);
+    const slide = trackRef.current?.children.item(nextIndex);
+
+    setActiveIndex(nextIndex);
+    slide?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+  };
+
+  const updateActiveSlide = () => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const trackLeft = track.getBoundingClientRect().left;
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    Array.from(track.children).forEach((slide, index) => {
+      const distance = Math.abs(slide.getBoundingClientRect().left - trackLeft);
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    setActiveIndex(nearestIndex);
+  };
+
+  if (events.length === 0) {
+    return <FeaturedEventCard event={null} today={today} />;
+  }
+
+  return (
+    <div className="featured-events-carousel" aria-roledescription="carousel" aria-label="Featured and recent OTY events">
+      {events.length > 1 && (
+        <div className="carousel-controls featured-controls">
+          <button type="button" aria-label="Previous featured event" onClick={() => goTo(activeIndex - 1)} disabled={activeIndex === 0}>
+            &lt;
+          </button>
+          <button
+            type="button"
+            aria-label="Next featured event"
+            onClick={() => goTo(activeIndex + 1)}
+            disabled={activeIndex === events.length - 1}
+          >
+            &gt;
+          </button>
+        </div>
+      )}
+      <div className="featured-events-track" ref={trackRef} onScroll={updateActiveSlide}>
+        {events.map((event, index) => (
+          <div className="featured-event-slide" key={event.id} aria-roledescription="slide" aria-label={`${index + 1} of ${events.length}`}>
+            <FeaturedEventCard event={event} today={today} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function FeaturedEventCard({ event, today }: { event: FeaturedEvent | null; today: Date | null }) {
+  const [orientation, setOrientation] = useState<"landscape" | "portrait" | "square">("landscape");
+
   if (!event) {
     return (
       <article className="featured-event empty-featured">
@@ -358,7 +424,21 @@ function FeaturedEventCard({ event, today }: { event: FeaturedEvent | null; toda
 
   return (
     <article className="featured-event">
-      <img src={event.image} alt={event.alt} width="920" height="1150" loading="lazy" />
+      <figure className={`featured-event-media ${orientation}`}>
+        <img
+          src={event.image}
+          alt={event.alt}
+          width="920"
+          height="1150"
+          loading="lazy"
+          onLoad={(image) => {
+            const { naturalHeight, naturalWidth } = image.currentTarget;
+            const ratio = naturalWidth / Math.max(1, naturalHeight);
+
+            setOrientation(ratio > 1.12 ? "landscape" : ratio < 0.88 ? "portrait" : "square");
+          }}
+        />
+      </figure>
       <div>
         <span className="event-meta">{label}</span>
         <h3>{event.title}</h3>
@@ -406,13 +486,8 @@ function getEventCards(today: Date | null, calendarEvents: CalendarEvent[]): Eve
   ];
 }
 
-function getFeaturedEvent(today: Date | null, featuredEvents: FeaturedEvent[]): FeaturedEvent | null {
-  const publishedEvents = [...featuredEvents]
+function getFeaturedEvents(featuredEvents: FeaturedEvent[]) {
+  return [...featuredEvents]
     .filter((event) => event.published)
-    .sort((first, second) => toDate(first.date).getTime() - toDate(second.date).getTime());
-
-  if (publishedEvents.length === 0) return null;
-  if (!today) return publishedEvents[0];
-
-  return publishedEvents.find((event) => toDate(event.date) >= today) ?? publishedEvents[0];
+    .sort((first, second) => toDate(second.date).getTime() - toDate(first.date).getTime());
 }

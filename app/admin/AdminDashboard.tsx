@@ -33,6 +33,7 @@ export function AdminDashboard() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [activeUploads, setActiveUploads] = useState(0);
   const [saveTarget, setSaveTarget] = useState("");
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"checking" | "signed-out" | "ready">("checking");
@@ -102,6 +103,10 @@ export function AdminDashboard() {
 
   const save = async () => {
     if (!content) return;
+    if (activeUploads > 0) {
+      setMessage("Wait for image uploads to finish before saving.");
+      return;
+    }
 
     setSaving(true);
     setMessage("");
@@ -303,8 +308,8 @@ export function AdminDashboard() {
         </div>
         <div className="admin-hero-actions">
           <span>{saveTargetLabel(saveTarget)}</span>
-          <button className="button button-primary" type="button" onClick={save} disabled={saving || !content}>
-            {saving ? "Saving" : "Save changes"}
+          <button className="button button-primary" type="button" onClick={save} disabled={saving || activeUploads > 0 || !content}>
+            {saving ? "Saving" : activeUploads > 0 ? "Uploading" : "Save changes"}
           </button>
           <button className="button button-secondary on-light" type="button" onClick={signOut}>
             Sign out
@@ -367,7 +372,12 @@ export function AdminDashboard() {
                 <Input label="Time" value={event.time} onChange={(value) => updateFeaturedEvent(index, { time: value })} />
                 <Input label="Location" value={event.location} onChange={(value) => updateFeaturedEvent(index, { location: value })} />
                 <TextArea label="Summary" value={event.summary} onChange={(value) => updateFeaturedEvent(index, { summary: value })} />
-                <ImageUpload label="Image" value={event.image} onChange={(value) => updateFeaturedEvent(index, { image: value })} />
+                <ImageUpload
+                  label="Image"
+                  value={event.image}
+                  onChange={(value) => updateFeaturedEvent(index, { image: value })}
+                  onUploadingChange={(uploading) => setActiveUploads((count) => Math.max(0, count + (uploading ? 1 : -1)))}
+                />
                 <Input label="Alt Text" value={event.alt} onChange={(value) => updateFeaturedEvent(index, { alt: value })} />
               </EditorCard>
             ))}
@@ -424,7 +434,12 @@ export function AdminDashboard() {
                 <Input label="ID" value={moment.id} onChange={(value) => updateMoment(index, { id: slugify(value) })} />
                 <Input label="Label" value={moment.label} onChange={(value) => updateMoment(index, { label: value })} />
                 <Input label="Title" value={moment.title} onChange={(value) => updateMoment(index, { title: value })} />
-                <ImageUpload label="Image" value={moment.image} onChange={(value) => updateMoment(index, { image: value })} />
+                <ImageUpload
+                  label="Image"
+                  value={moment.image}
+                  onChange={(value) => updateMoment(index, { image: value })}
+                  onUploadingChange={(uploading) => setActiveUploads((count) => Math.max(0, count + (uploading ? 1 : -1)))}
+                />
                 <Input label="Alt Text" value={moment.alt} onChange={(value) => updateMoment(index, { alt: value })} />
                 <TextArea label="Details" value={moment.details} onChange={(value) => updateMoment(index, { details: value })} />
               </EditorCard>
@@ -514,7 +529,17 @@ function TextArea({ label, onChange, value }: { label: string; onChange: (value:
   );
 }
 
-function ImageUpload({ label, onChange, value }: { label: string; onChange: (value: string) => void; value: string }) {
+function ImageUpload({
+  label,
+  onChange,
+  onUploadingChange,
+  value,
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  onUploadingChange: (uploading: boolean) => void;
+  value: string;
+}) {
   const [dragActive, setDragActive] = useState(false);
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState(0);
@@ -522,6 +547,7 @@ function ImageUpload({ label, onChange, value }: { label: string; onChange: (val
 
   const uploadFile = async (file: File | undefined) => {
     if (!file) return;
+    if (uploading) return;
 
     if (!allowedImageTypes.includes(file.type)) {
       setMessage("Upload a JPG, PNG, WebP, AVIF, or GIF image.");
@@ -536,6 +562,7 @@ function ImageUpload({ label, onChange, value }: { label: string; onChange: (val
     setMessage("");
     setProgress(0);
     setUploading(true);
+    onUploadingChange(true);
 
     try {
       const blob = await upload(uploadPathFor(file), file, {
@@ -547,13 +574,14 @@ function ImageUpload({ label, onChange, value }: { label: string; onChange: (val
       });
 
       onChange(blob.url);
-      setMessage("Uploaded directly to Vercel Blob. Save changes to use it on the site.");
+      setMessage("Uploaded directly to Vercel Blob and updated this image field. Save changes to publish it.");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message.replace(/^Vercel Blob:\s*/, "") : "Image could not be uploaded.";
 
       setMessage(errorMessage || "Image could not be uploaded.");
     } finally {
       setUploading(false);
+      onUploadingChange(false);
     }
   };
 
