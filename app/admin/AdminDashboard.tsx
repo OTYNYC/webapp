@@ -585,7 +585,9 @@ function ImageUpload({
     if (!file) return;
     if (uploading) return;
 
-    if (!allowedImageTypes.includes(file.type)) {
+    const contentType = acceptedImageTypeFor(file);
+
+    if (!contentType) {
       setMessage("Upload a JPG, PNG, WebP, AVIF, or GIF image.");
       return;
     }
@@ -603,7 +605,7 @@ function ImageUpload({
     try {
       const blob = await upload(uploadPathFor(file), file, {
         access: "public",
-        contentType: file.type,
+        contentType,
         handleUploadUrl: "/api/admin/uploads",
         multipart: file.size > multipartThresholdBytes,
         onUploadProgress: (event) => setProgress(event.percentage),
@@ -648,7 +650,7 @@ function ImageUpload({
         </div>
         <input
           type="file"
-          accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
+          accept=".avif,.gif,.jpg,.jpeg,.png,.webp,image/avif,image/gif,image/jpeg,image/jpg,image/pjpeg,image/png,image/webp"
           disabled={uploading}
           onChange={(event) => void uploadFile(event.target.files?.item(0) || undefined)}
         />
@@ -665,9 +667,16 @@ function ImageUpload({
   );
 }
 
-const allowedImageTypes = ["image/avif", "image/gif", "image/jpeg", "image/png", "image/webp"];
 const maxUploadBytes = 25 * 1024 * 1024;
 const multipartThresholdBytes = 4 * 1024 * 1024;
+const imageTypesByExtension: Record<string, string> = {
+  avif: "image/avif",
+  gif: "image/gif",
+  jpeg: "image/jpeg",
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
 
 function uploadPathFor(file: File) {
   const extension = extensionFor(file);
@@ -682,12 +691,40 @@ function uploadPathFor(file: File) {
 }
 
 function extensionFor(file: File) {
-  if (file.type === "image/avif") return "avif";
-  if (file.type === "image/gif") return "gif";
-  if (file.type === "image/png") return "png";
-  if (file.type === "image/webp") return "webp";
+  const fileExtension = extensionFromName(file.name);
+  const contentType = acceptedImageTypeFor(file);
+
+  if (fileExtension && imageTypesByExtension[fileExtension] === contentType) {
+    return fileExtension === "jpeg" ? "jpg" : fileExtension;
+  }
+
+  if (contentType === "image/avif") return "avif";
+  if (contentType === "image/gif") return "gif";
+  if (contentType === "image/png") return "png";
+  if (contentType === "image/webp") return "webp";
 
   return "jpg";
+}
+
+function acceptedImageTypeFor(file: File) {
+  const normalizedType = normalizeImageType(file.type);
+
+  if (normalizedType) return normalizedType;
+
+  const fileExtension = extensionFromName(file.name);
+
+  return fileExtension ? imageTypesByExtension[fileExtension] || "" : "";
+}
+
+function normalizeImageType(type: string) {
+  if (type === "image/jpg" || type === "image/jpeg" || type === "image/pjpeg") return "image/jpeg";
+  if (type === "image/avif" || type === "image/gif" || type === "image/png" || type === "image/webp") return type;
+
+  return "";
+}
+
+function extensionFromName(name: string) {
+  return name.split(".").pop()?.toLowerCase() || "";
 }
 
 function updateItem<T>(items: T[], index: number, patch: Partial<T>) {
