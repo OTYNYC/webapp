@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { calendarEvents, moments, type Moment } from "./data";
+import { MomentsCarousel } from "./components/MomentsCarousel";
+import { calendarEvents, featuredEvents, moments, type FeaturedEvent, type Moment } from "./data";
 import { formatRange, getStatus, startOfDay, toDate } from "./lib/calendar";
 
 interface EventCard {
@@ -72,6 +73,8 @@ export default function Home() {
   }, []);
 
   const cards = useMemo(() => getEventCards(today), [today]);
+  const featuredEvent = useMemo(() => getFeaturedEvent(today), [today]);
+  const visibleMoments = useMemo(() => moments.filter((moment) => moment.published), []);
 
   return (
     <>
@@ -127,20 +130,7 @@ export default function Home() {
             </Link>
           </div>
           <div className="current-layout">
-            <article className="featured-event">
-              <img
-                src="/assets/holy-matrimony-panel.avif"
-                alt="Holy Matrimony Panel event poster"
-                width="920"
-                height="1150"
-                loading="lazy"
-              />
-              <div>
-                <span className="event-meta">Featured Event</span>
-                <h3>Holy Matrimony Panel</h3>
-                <p>Saturday, June 27, 2026 at 2:00 PM. A community discussion at 241 E 62nd Street, New York, NY.</p>
-              </div>
-            </article>
+            <FeaturedEventCard event={featuredEvent} today={today} />
             <div className="event-grid" aria-live="polite">
               {cards.map((card) => (
                 <article className="event-card" key={`${card.meta}-${card.title}`}>
@@ -238,18 +228,7 @@ export default function Home() {
               <h2 id="moments-title">Recent gatherings and shared milestones.</h2>
             </div>
           </div>
-          <div className="moments-grid">
-            {moments.map((moment) => (
-              <button className="moment-card" key={moment.id} type="button" onClick={() => setSelectedMoment(moment)}>
-                <img src={moment.image} alt={moment.alt} width="4032" height="3024" loading="lazy" />
-                <div>
-                  <span>{moment.label}</span>
-                  <h3>{moment.title}</h3>
-                  <small>View details</small>
-                </div>
-              </button>
-            ))}
-          </div>
+          <MomentsCarousel moments={visibleMoments} onSelect={setSelectedMoment} />
         </section>
 
         <section
@@ -352,9 +331,40 @@ export default function Home() {
   );
 }
 
+function FeaturedEventCard({ event, today }: { event: FeaturedEvent | null; today: Date | null }) {
+  if (!event) {
+    return (
+      <article className="featured-event empty-featured">
+        <div>
+          <span className="event-meta">Featured Event</span>
+          <h3>More OTY events coming soon</h3>
+          <p>New gatherings can be added from the admin dashboard once details are confirmed.</p>
+        </div>
+      </article>
+    );
+  }
+
+  const eventDate = toDate(event.date);
+  const label = today && eventDate < today ? "Recent Event" : event.label;
+
+  return (
+    <article className="featured-event">
+      <img src={event.image} alt={event.alt} width="920" height="1150" loading="lazy" />
+      <div>
+        <span className="event-meta">{label}</span>
+        <h3>{event.title}</h3>
+        <p>{event.summary}</p>
+      </div>
+    </article>
+  );
+}
+
 function getEventCards(today: Date | null): EventCard[] {
-  const current = today ? calendarEvents.find((event) => getStatus(event, today) === "Now") : null;
-  const next = today ? calendarEvents.find((event) => toDate(event.start) >= today && getStatus(event, today) !== "Now") : null;
+  const chronologicalEvents = [...calendarEvents].sort((first, second) => toDate(first.start).getTime() - toDate(second.start).getTime());
+  const current = today ? chronologicalEvents.find((event) => getStatus(event, today) === "Now") : null;
+  const next = today
+    ? chronologicalEvents.find((event) => toDate(event.start) >= today && getStatus(event, today) !== "Now")
+    : null;
 
   return [
     current
@@ -385,4 +395,15 @@ function getEventCards(today: Date | null): EventCard[] {
       body: "Browse Bronx, Brooklyn, Manhattan, and Queens churches for Divine Liturgy, Kidan, Vespers, and Bible study.",
     },
   ];
+}
+
+function getFeaturedEvent(today: Date | null): FeaturedEvent | null {
+  const publishedEvents = [...featuredEvents]
+    .filter((event) => event.published)
+    .sort((first, second) => toDate(first.date).getTime() - toDate(second.date).getTime());
+
+  if (publishedEvents.length === 0) return null;
+  if (!today) return publishedEvents[0];
+
+  return publishedEvents.find((event) => toDate(event.date) >= today) ?? publishedEvents[0];
 }

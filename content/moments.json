@@ -1,0 +1,20 @@
+[
+  {
+    "id": "palm-sunday",
+    "label": "Palm Sunday | April 5, 2026",
+    "title": "Hosanna with the OTY NYC community",
+    "image": "/assets/palm-sunday-community.jpeg",
+    "alt": "OTY NYC community gathered for Palm Sunday",
+    "details": "A Palm Sunday gathering with OTY NYC, clergy, and friends after worship. This moment captures the fellowship and shared Orthodox life the community is building in New York City.",
+    "published": true
+  },
+  {
+    "id": "fellowship",
+    "label": "Fellowship",
+    "title": "Learning, mentorship, and community life",
+    "image": "/assets/community-gathering.jpeg",
+    "alt": "OTY NYC community gathering with clergy and young adults",
+    "details": "A teaching and fellowship gathering for young adults to learn, ask questions, and build relationships across parish communities. These gatherings support both spiritual formation and everyday life in the city.",
+    "published": true
+  }
+]
