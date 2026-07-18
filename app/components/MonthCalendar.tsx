@@ -101,7 +101,7 @@ export function MonthCalendar({ events, year, month, monthLabel, prevHref, nextH
 function EventDetailCard({ event }: { event: CalendarEventDetail }) {
   const heroImage = event.attachments.find((attachment) => attachment.imageSrc);
   const otherAttachments = event.attachments.filter((attachment) => attachment !== heroImage);
-  const { text: description, url: rsvpUrl } = extractLink(event.description);
+  const { text: description, url: rsvpUrl } = parseDescription(event.description);
 
   return (
     <article className={`event-detail-card${heroImage ? " with-image" : ""}`}>
@@ -199,20 +199,58 @@ function isLREvent(title: string): boolean {
 
 const URL_PATTERN = /https?:\/\/\S+/i;
 const TRAILING_PUNCTUATION_PATTERN = /[.,;:!?)\]]+$/;
+const ANCHOR_PATTERN = /<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>[\s\S]*?<\/a>/i;
+const BREAK_PATTERN = /<br\s*\/?>/gi;
+const BLOCK_CLOSE_PATTERN = /<\/(?:p|div|li)\s*>/gi;
+const BLOCK_OPEN_PATTERN = /<(?:p|div|li|ul|ol)\b[^>]*>/gi;
+const ANY_TAG_PATTERN = /<[^>]+>/g;
 
-function extractLink(description: string): { text: string; url: string | null } {
-  const match = description.match(URL_PATTERN);
+const HTML_ENTITIES: Record<string, string> = {
+  "&nbsp;": " ",
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'",
+};
 
-  if (!match || match.index === undefined) {
-    return { text: description, url: null };
+function decodeHtmlEntities(value: string): string {
+  return value.replace(/&(?:nbsp|amp|lt|gt|quot|#39|apos);/g, (entity) => HTML_ENTITIES[entity] ?? entity);
+}
+
+// Google Calendar descriptions can come back as HTML (rich-text events use <br>, <a href>, etc).
+// We never render this as HTML (that would open an XSS hole via calendar-editor access) - instead
+// we manually interpret the handful of tags we care about and strip everything else as plain text.
+function parseDescription(description: string): { text: string; url: string | null } {
+  let url: string | null = null;
+  let working = description;
+
+  const anchorMatch = working.match(ANCHOR_PATTERN);
+  if (anchorMatch && anchorMatch.index !== undefined) {
+    url = anchorMatch[1] ?? anchorMatch[2] ?? null;
+    working = working.slice(0, anchorMatch.index) + working.slice(anchorMatch.index + anchorMatch[0].length);
   }
 
-  const text = (description.slice(0, match.index) + description.slice(match.index + match[0].length))
+  working = decodeHtmlEntities(
+    working.replace(BREAK_PATTERN, "\n").replace(BLOCK_CLOSE_PATTERN, "\n").replace(BLOCK_OPEN_PATTERN, "").replace(ANY_TAG_PATTERN, ""),
+  );
+
+  if (!url) {
+    const bareUrlMatch = working.match(URL_PATTERN);
+    if (bareUrlMatch && bareUrlMatch.index !== undefined) {
+      url = bareUrlMatch[0].replace(TRAILING_PUNCTUATION_PATTERN, "");
+      working = working.slice(0, bareUrlMatch.index) + working.slice(bareUrlMatch.index + bareUrlMatch[0].length);
+    }
+  }
+
+  const text = working
     .replace(/[ \t]{2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
+    .replace(/^[ \t]+|[ \t]+$/gm, "")
     .trim();
 
-  return { text, url: match[0].replace(TRAILING_PUNCTUATION_PATTERN, "") };
+  return { text, url };
 }
 
 function formatModalDate(dateKey: string): string {

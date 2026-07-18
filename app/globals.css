@@ -1549,55 +1549,6 @@ section[id],
   font-weight: 800;
 }
 
-.calendar-list {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.calendar-item {
-  display: grid;
-  grid-template-columns: 10rem 1fr auto;
-  gap: 1rem;
-  align-items: center;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-.calendar-date {
-  color: var(--green);
-  font-weight: 950;
-}
-
-.calendar-item h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.calendar-status {
-  border-radius: var(--radius);
-  padding: 0.28rem 0.5rem;
-  font-size: 0.74rem;
-  font-weight: 950;
-  text-transform: uppercase;
-}
-
-.status-now {
-  color: #163b35;
-  background: #cbe9d9;
-}
-
-.status-upcoming {
-  color: #734a08;
-  background: #ffe2a3;
-}
-
-.status-past {
-  color: #6c6257;
-  background: #f0e6d6;
-}
-
 .calendar-error {
   margin: 0 0 1rem;
   padding: 0.75rem 1rem;
@@ -2334,7 +2285,6 @@ section[id],
   .mission-card,
   .destination-card,
   .church-card,
-  .calendar-item,
   .reveal-step,
   .fasting-copy,
   .fasting-panel,
@@ -2421,11 +2371,6 @@ section[id],
 
   .nav-toggle {
     display: inline-flex;
-  }
-
-  .calendar-item {
-    grid-template-columns: 1fr;
-    gap: 0.35rem;
   }
 
   .month-day {
