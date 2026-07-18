@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { MomentsCarousel } from "./components/MomentsCarousel";
+import { mission } from "./data";
 import type { CalendarEvent, FeaturedEvent, Moment } from "./data";
 import { formatRange, getStatus, startOfDay, toDate } from "./lib/calendar";
 
@@ -184,25 +185,18 @@ export function HomeClient({ content }: HomeClientProps) {
 
         <section className="section mission-section" id="mission" aria-labelledby="mission-title">
           <div className="mission-copy">
-            <p className="section-kicker">Our Mission</p>
-            <h2 id="mission-title">Rooted in the Orthodox Tewahedo faith, shaped for New York life.</h2>
-            <p>
-              OTY NYC guides young Orthodox Tewahedo Christians into a deeper understanding of their faith and supports
-              them in living an authentic Orthodox life amid the challenges of New York City.
-            </p>
-            <p>
-              We provide core knowledge of Church history, dogma, canons, and rites that many have not had the
-              opportunity to learn, while fostering fellowship, service, and mentorship that strengthens both spiritual
-              and everyday life.
-            </p>
+            <p className="section-kicker">{mission.kicker}</p>
+            <h2 id="mission-title">{mission.heading}</h2>
+            {mission.paragraphs.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
           </div>
           <div className="mission-card" aria-label="OTY NYC focus areas">
             <img src="/assets/oty-logo.png" alt="OTY NYC official logo" width="258" height="227" />
             <div className="focus-list">
-              <span>Learn the faith</span>
-              <span>Find services</span>
-              <span>Keep the fast</span>
-              <span>Build fellowship</span>
+              {mission.focusAreas.map((focusArea) => (
+                <span key={focusArea}>{focusArea}</span>
+              ))}
             </div>
           </div>
         </section>
