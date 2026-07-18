@@ -9,6 +9,7 @@ const navItems = [
   { label: "Current", href: "/#current", activePath: "" },
   { label: "Churches", href: "/churches", activePath: "/churches" },
   { label: "Calendar", href: "/calendar", activePath: "/calendar" },
+  { label: "Calendar V2", href: "/calendar-v2", activePath: "/calendar-v2" },
   { label: "Fasting Food", href: "/fasting", activePath: "/fasting" },
 ];
 
