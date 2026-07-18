@@ -45,9 +45,9 @@ files and are capped at 25 MB.
 Local development without Blob credentials falls back to the checked-in JSON files for content. Image uploads require
 Blob credentials.
 
-## Calendar V2 (Google Calendar)
+## Calendar (Google Calendar)
 
-`/calendar-v2` renders a custom month-view calendar backed by a live Google Calendar, with a click-into-day modal
+`/calendar` renders a custom month-view calendar backed by a live Google Calendar, with a click-into-day modal
 showing each event's time, location, description, and any image/file attachments.
 
 Required environment variables:
@@ -56,7 +56,7 @@ Required environment variables:
 - `GOOGLE_CALENDAR_ID`: the calendar's ID from Google Calendar Settings > Integrate calendar
 
 The calendar must be public ("Make available to public") for API-key-only access to work. Without both variables
-set, `/calendar-v2` renders a setup notice instead of erroring.
+set, `/calendar` renders a setup notice instead of erroring.
 
 Image attachments only render inline if the underlying Google Drive file is shared "Anyone with the link" -
 otherwise the attachment still shows as a downloadable link. Event descriptions are rendered as plain text (not

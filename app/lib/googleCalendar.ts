@@ -78,8 +78,7 @@ export async function fetchMonthEvents(year: number, month: number): Promise<Mon
 
   try {
     const response = await fetch(`${CALENDAR_API_BASE}/${calendarId}/events?${params.toString()}`, {
-      // TODO: bump to 300 (5 min) before merging - shortened to 60s for local testing
-      next: { revalidate: 60 },
+      next: { revalidate: 300 },
     });
 
     const data = (await response.json()) as RawGoogleEventsResponse;
