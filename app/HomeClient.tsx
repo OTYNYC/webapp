@@ -1,17 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { CurrentEventsSection } from "./components/CurrentEventsSection";
 import { MomentsCarousel } from "./components/MomentsCarousel";
 import { mission } from "./data";
 import type { CalendarEvent, FeaturedEvent, Moment } from "./data";
-import { formatRange, getStatus, startOfDay, toDate } from "./lib/calendar";
-
-interface EventCard {
-  meta: string;
-  title: string;
-  body: string;
-}
 
 interface HomeClientProps {
   content: {
@@ -23,13 +17,8 @@ interface HomeClientProps {
 
 export function HomeClient({ content }: HomeClientProps) {
   const { calendarEvents, featuredEvents, moments } = content;
-  const [today, setToday] = useState<Date | null>(null);
   const [selectedMoment, setSelectedMoment] = useState<Moment | null>(null);
   const [revealProgress, setRevealProgress] = useState(0);
-
-  useEffect(() => {
-    setToday(startOfDay(new Date()));
-  }, []);
 
   useEffect(() => {
     if (!selectedMoment) return undefined;
@@ -82,8 +71,6 @@ export function HomeClient({ content }: HomeClientProps) {
     };
   }, []);
 
-  const cards = useMemo(() => getEventCards(today, calendarEvents), [calendarEvents, today]);
-  const visibleFeaturedEvents = useMemo(() => getFeaturedEvents(featuredEvents), [featuredEvents]);
   const visibleMoments = useMemo(() => moments.filter((moment) => moment.published), [moments]);
 
   return (
@@ -128,30 +115,7 @@ export function HomeClient({ content }: HomeClientProps) {
           </div>
         </section>
 
-        <section className="current-strip" id="current" aria-labelledby="events-title">
-          <div className="section-kicker">Current Events</div>
-          <div className="section-heading compact">
-            <div>
-              <h2 id="events-title">What to keep close this week</h2>
-              <p>Church calendar notes, gathering prompts, and practical NYC links.</p>
-            </div>
-            <Link className="text-link" href="/calendar">
-              Full 2026 calendar
-            </Link>
-          </div>
-          <div className="current-layout">
-            <FeaturedEventsCarousel events={visibleFeaturedEvents} today={today} />
-            <div className="event-grid" aria-live="polite">
-              {cards.map((card) => (
-                <article className="event-card" key={`${card.meta}-${card.title}`}>
-                  <span className="event-meta">{card.meta}</span>
-                  <strong>{card.title}</strong>
-                  <p>{card.body}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
+        <CurrentEventsSection calendarEvents={calendarEvents} featuredEvents={featuredEvents} />
 
         <section className="section destination-section" aria-labelledby="destinations-title">
           <div className="section-heading">
@@ -332,156 +296,4 @@ export function HomeClient({ content }: HomeClientProps) {
       )}
     </>
   );
-}
-
-function FeaturedEventsCarousel({ events, today }: { events: FeaturedEvent[]; today: Date | null }) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  const goTo = (index: number) => {
-    const nextIndex = Math.min(Math.max(index, 0), events.length - 1);
-    const slide = trackRef.current?.children.item(nextIndex);
-
-    setActiveIndex(nextIndex);
-    slide?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
-  };
-
-  const updateActiveSlide = () => {
-    const track = trackRef.current;
-    if (!track) return;
-
-    const trackLeft = track.getBoundingClientRect().left;
-    let nearestIndex = 0;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-
-    Array.from(track.children).forEach((slide, index) => {
-      const distance = Math.abs(slide.getBoundingClientRect().left - trackLeft);
-
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestIndex = index;
-      }
-    });
-
-    setActiveIndex(nearestIndex);
-  };
-
-  if (events.length === 0) {
-    return <FeaturedEventCard event={null} today={today} />;
-  }
-
-  return (
-    <div className="featured-events-carousel" aria-roledescription="carousel" aria-label="Featured and recent OTY events">
-      {events.length > 1 && (
-        <div className="carousel-controls featured-controls">
-          <button type="button" aria-label="Previous featured event" onClick={() => goTo(activeIndex - 1)} disabled={activeIndex === 0}>
-            &lt;
-          </button>
-          <button
-            type="button"
-            aria-label="Next featured event"
-            onClick={() => goTo(activeIndex + 1)}
-            disabled={activeIndex === events.length - 1}
-          >
-            &gt;
-          </button>
-        </div>
-      )}
-      <div className="featured-events-track" ref={trackRef} onScroll={updateActiveSlide}>
-        {events.map((event, index) => (
-          <div className="featured-event-slide" key={event.id} aria-roledescription="slide" aria-label={`${index + 1} of ${events.length}`}>
-            <FeaturedEventCard event={event} today={today} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function FeaturedEventCard({ event, today }: { event: FeaturedEvent | null; today: Date | null }) {
-  const [orientation, setOrientation] = useState<"landscape" | "portrait" | "square">("landscape");
-
-  if (!event) {
-    return (
-      <article className="featured-event empty-featured">
-        <div>
-          <span className="event-meta">Featured Event</span>
-          <h3>More OTY events coming soon</h3>
-          <p>New gatherings can be added from the admin dashboard once details are confirmed.</p>
-        </div>
-      </article>
-    );
-  }
-
-  const eventDate = toDate(event.date);
-  const label = today && eventDate < today ? "Recent Event" : event.label;
-
-  return (
-    <article className="featured-event">
-      <figure className={`featured-event-media ${orientation}`}>
-        <img
-          src={event.image}
-          alt={event.alt}
-          width="920"
-          height="1150"
-          loading="lazy"
-          onLoad={(image) => {
-            const { naturalHeight, naturalWidth } = image.currentTarget;
-            const ratio = naturalWidth / Math.max(1, naturalHeight);
-
-            setOrientation(ratio > 1.12 ? "landscape" : ratio < 0.88 ? "portrait" : "square");
-          }}
-        />
-      </figure>
-      <div>
-        <span className="event-meta">{label}</span>
-        <h3>{event.title}</h3>
-        <p>{event.summary}</p>
-      </div>
-    </article>
-  );
-}
-
-function getEventCards(today: Date | null, calendarEvents: CalendarEvent[]): EventCard[] {
-  const chronologicalEvents = [...calendarEvents].sort((first, second) => toDate(first.start).getTime() - toDate(second.start).getTime());
-  const current = today ? chronologicalEvents.find((event) => getStatus(event, today) === "Now") : null;
-  const next = today
-    ? chronologicalEvents.find((event) => toDate(event.start) >= today && getStatus(event, today) !== "Now")
-    : null;
-
-  return [
-    current
-      ? {
-          meta: "Now",
-          title: current.title,
-          body: `${formatRange(current)}. Use the vegan map and church directory to plan the week.`,
-        }
-      : {
-          meta: "Calendar",
-          title: "2026 calendar highlights",
-          body: "Review the feast and fasting dates and keep an eye on OTY NYC for gatherings.",
-        },
-    next
-      ? {
-          meta: "Upcoming",
-          title: next.title,
-          body: `${formatRange(next)}. Add it to your calendar and check in with your parish.`,
-        }
-      : {
-          meta: "Upcoming",
-          title: "More dates coming",
-          body: "OTY NYC can update this section as new events and church gatherings are confirmed.",
-        },
-    {
-      meta: "Every Week",
-      title: "Find Sunday service",
-      body: "Browse Bronx, Brooklyn, Manhattan, and Queens churches for Divine Liturgy, Kidan, Vespers, and Bible study.",
-    },
-  ];
-}
-
-function getFeaturedEvents(featuredEvents: FeaturedEvent[]) {
-  return [...featuredEvents]
-    .filter((event) => event.published)
-    .sort((first, second) => toDate(second.date).getTime() - toDate(first.date).getTime());
 }

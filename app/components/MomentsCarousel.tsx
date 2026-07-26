@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { Moment } from "../data";
+import { ChevronIcon } from "./ChevronIcon";
 
 interface MomentsCarouselProps {
   moments: Moment[];
@@ -48,7 +49,7 @@ export function MomentsCarousel({ moments, onSelect }: MomentsCarouselProps) {
     <div className="moments-carousel" aria-roledescription="carousel" aria-label="Community moments">
       <div className="carousel-controls">
         <button type="button" aria-label="Previous community moment" onClick={() => goTo(activeIndex - 1)} disabled={activeIndex === 0}>
-          &lt;
+          <ChevronIcon direction="left" />
         </button>
         <button
           type="button"
@@ -56,7 +57,7 @@ export function MomentsCarousel({ moments, onSelect }: MomentsCarouselProps) {
           onClick={() => goTo(activeIndex + 1)}
           disabled={activeIndex === moments.length - 1}
         >
-          &gt;
+          <ChevronIcon direction="right" />
         </button>
       </div>
 

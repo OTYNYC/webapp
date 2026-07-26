@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { CalendarAttachment, CalendarEventDetail } from "../lib/googleCalendar";
+import { ChevronIcon } from "./ChevronIcon";
+import { EventAttachmentPreview } from "./EventAttachmentPreview";
+import { formatEventTime, isFeaturedEvent, parseEventDescription, stripFeaturedPrefix } from "../lib/eventDisplay";
+import type { CalendarEventDetail } from "../lib/googleCalendar";
 import { getMonthGridDays, toDateKey } from "../lib/monthGrid";
 
 interface MonthCalendarProps {
@@ -27,11 +30,11 @@ export function MonthCalendar({ events, year, month, monthLabel, prevHref, nextH
     <div className="month-calendar">
       <div className="month-calendar-toolbar">
         <Link className="month-nav" href={prevHref} aria-label="Previous month" scroll={false}>
-          &lt;
+          <ChevronIcon direction="left" />
         </Link>
         <h2>{monthLabel}</h2>
         <Link className="month-nav" href={nextHref} aria-label="Next month" scroll={false}>
-          &gt;
+          <ChevronIcon direction="right" />
         </Link>
       </div>
 
@@ -61,8 +64,8 @@ export function MonthCalendar({ events, year, month, monthLabel, prevHref, nextH
               {dayEvents.length > 0 && (
                 <span className="month-day-chips">
                   {dayEvents.slice(0, 3).map((event) => (
-                    <span className={`month-day-chip${isLREvent(event.title) ? " lr-event" : ""}`} key={event.id}>
-                      {event.title}
+                    <span className={`month-day-chip${isFeaturedEvent(event.title) ? " featured-title" : ""}`} key={event.id}>
+                      {stripFeaturedPrefix(event.title)}
                     </span>
                   ))}
                   {dayEvents.length > 3 && <span className="month-day-chip more">+{dayEvents.length - 3} more</span>}
@@ -101,17 +104,17 @@ export function MonthCalendar({ events, year, month, monthLabel, prevHref, nextH
 function EventDetailCard({ event }: { event: CalendarEventDetail }) {
   const heroImage = event.attachments.find((attachment) => attachment.imageSrc);
   const otherAttachments = event.attachments.filter((attachment) => attachment !== heroImage);
-  const { text: description, url: rsvpUrl } = parseDescription(event.description);
+  const { text: description, url: rsvpUrl } = parseEventDescription(event.description);
 
   return (
     <article className={`event-detail-card${heroImage ? " with-image" : ""}`}>
       {heroImage && (
         <div className="event-detail-media">
-          <AttachmentPreview attachment={heroImage} />
+          <EventAttachmentPreview attachment={heroImage} />
         </div>
       )}
       <div className="event-detail-body">
-        <h3 className={isLREvent(event.title) ? "lr-event" : undefined}>{event.title}</h3>
+        <h3 className={isFeaturedEvent(event.title) ? "featured-title" : undefined}>{stripFeaturedPrefix(event.title)}</h3>
         <p className="event-detail-time">{formatEventTime(event)}</p>
         {event.location && <p className="event-detail-location">{event.location}</p>}
         {description && <p className="event-detail-description">{description}</p>}
@@ -123,7 +126,7 @@ function EventDetailCard({ event }: { event: CalendarEventDetail }) {
         {otherAttachments.length > 0 && (
           <div className="event-detail-attachments">
             {otherAttachments.map((attachment, index) => (
-              <AttachmentPreview attachment={attachment} key={`${event.id}-${index}`} />
+              <EventAttachmentPreview attachment={attachment} key={`${event.id}-${index}`} />
             ))}
           </div>
         )}
@@ -134,25 +137,6 @@ function EventDetailCard({ event }: { event: CalendarEventDetail }) {
         )}
       </div>
     </article>
-  );
-}
-
-function AttachmentPreview({ attachment }: { attachment: CalendarAttachment }) {
-  const [imageFailed, setImageFailed] = useState(false);
-
-  if (attachment.imageSrc && !imageFailed) {
-    return (
-      <a className="attachment-image" href={attachment.fileUrl || attachment.imageSrc} target="_blank" rel="noreferrer">
-        <img src={attachment.imageSrc} alt={attachment.title} loading="lazy" onError={() => setImageFailed(true)} />
-      </a>
-    );
-  }
-
-  return (
-    <a className="attachment-file" href={attachment.fileUrl} target="_blank" rel="noreferrer">
-      {attachment.iconLink && <img src={attachment.iconLink} alt="" width="16" height="16" />}
-      {imageFailed ? "View image (not public yet)" : attachment.title}
-    </a>
   );
 }
 
@@ -178,79 +162,6 @@ function groupEventsByDay(events: CalendarEventDetail[], gridDays: Date[]): Reco
   }
 
   return map;
-}
-
-function formatEventTime(event: CalendarEventDetail): string {
-  if (event.allDay) return "All day";
-
-  const start = new Date(event.start);
-  const end = new Date(event.end);
-  const startText = start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  const endText = end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-
-  return `${startText} - ${endText}`;
-}
-
-const LR_PREFIX_PATTERN = /^lr(?=[\s:-]|$)/i;
-
-function isLREvent(title: string): boolean {
-  return LR_PREFIX_PATTERN.test(title.trim());
-}
-
-const URL_PATTERN = /https?:\/\/\S+/i;
-const TRAILING_PUNCTUATION_PATTERN = /[.,;:!?)\]]+$/;
-const ANCHOR_PATTERN = /<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>[\s\S]*?<\/a>/i;
-const BREAK_PATTERN = /<br\s*\/?>/gi;
-const BLOCK_CLOSE_PATTERN = /<\/(?:p|div|li)\s*>/gi;
-const BLOCK_OPEN_PATTERN = /<(?:p|div|li|ul|ol)\b[^>]*>/gi;
-const ANY_TAG_PATTERN = /<[^>]+>/g;
-
-const HTML_ENTITIES: Record<string, string> = {
-  "&nbsp;": " ",
-  "&amp;": "&",
-  "&lt;": "<",
-  "&gt;": ">",
-  "&quot;": '"',
-  "&#39;": "'",
-  "&apos;": "'",
-};
-
-function decodeHtmlEntities(value: string): string {
-  return value.replace(/&(?:nbsp|amp|lt|gt|quot|#39|apos);/g, (entity) => HTML_ENTITIES[entity] ?? entity);
-}
-
-// Google Calendar descriptions can come back as HTML (rich-text events use <br>, <a href>, etc).
-// We never render this as HTML (that would open an XSS hole via calendar-editor access) - instead
-// we manually interpret the handful of tags we care about and strip everything else as plain text.
-function parseDescription(description: string): { text: string; url: string | null } {
-  let url: string | null = null;
-  let working = description;
-
-  const anchorMatch = working.match(ANCHOR_PATTERN);
-  if (anchorMatch && anchorMatch.index !== undefined) {
-    url = anchorMatch[1] ?? anchorMatch[2] ?? null;
-    working = working.slice(0, anchorMatch.index) + working.slice(anchorMatch.index + anchorMatch[0].length);
-  }
-
-  working = decodeHtmlEntities(
-    working.replace(BREAK_PATTERN, "\n").replace(BLOCK_CLOSE_PATTERN, "\n").replace(BLOCK_OPEN_PATTERN, "").replace(ANY_TAG_PATTERN, ""),
-  );
-
-  if (!url) {
-    const bareUrlMatch = working.match(URL_PATTERN);
-    if (bareUrlMatch && bareUrlMatch.index !== undefined) {
-      url = bareUrlMatch[0].replace(TRAILING_PUNCTUATION_PATTERN, "");
-      working = working.slice(0, bareUrlMatch.index) + working.slice(bareUrlMatch.index + bareUrlMatch[0].length);
-    }
-  }
-
-  const text = working
-    .replace(/[ \t]{2,}/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/^[ \t]+|[ \t]+$/gm, "")
-    .trim();
-
-  return { text, url };
 }
 
 function formatModalDate(dateKey: string): string {

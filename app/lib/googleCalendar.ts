@@ -1,3 +1,4 @@
+import { isFeaturedEvent } from "./eventDisplay";
 import { getMonthGridDays } from "./monthGrid";
 
 const CALENDAR_API_BASE = "https://www.googleapis.com/calendar/v3/calendars";
@@ -56,14 +57,69 @@ export function hasGoogleCalendarConfig() {
 }
 
 export async function fetchMonthEvents(year: number, month: number): Promise<MonthEventsResult> {
-  if (!hasGoogleCalendarConfig()) {
-    return { events: [], error: "not-configured" };
-  }
-
   const gridDays = getMonthGridDays(year, month);
   const timeMin = gridDays[0];
   const timeMax = new Date(gridDays[gridDays.length - 1]);
   timeMax.setDate(timeMax.getDate() + 1);
+
+  return fetchEventsInRange(timeMin, timeMax);
+}
+
+const FEATURED_EVENT_WINDOW_DAYS = 30;
+
+export async function fetchUpcomingFeaturedEvents(): Promise<MonthEventsResult> {
+  const timeMin = new Date();
+  const timeMax = new Date(timeMin);
+  timeMax.setDate(timeMax.getDate() + FEATURED_EVENT_WINDOW_DAYS);
+
+  const result = await fetchEventsInRange(timeMin, timeMax);
+  if (result.error) return result;
+
+  const matching = result.events
+    .filter((event) => new Date(event.start) >= timeMin)
+    .filter((event) => isFeaturedEvent(event.title))
+    .sort((first, second) => new Date(first.start).getTime() - new Date(second.start).getTime());
+
+  return { events: matching, error: null };
+}
+
+const FEAST_FAST_WINDOW_DAYS = 400;
+const FEAST_FAST_LIMIT = 3;
+const FEAST_PATTERN = /\bfeast\b/i;
+const FAST_PATTERN = /\bfast\b/i;
+
+export interface FeastFastItem {
+  event: CalendarEventDetail;
+  kind: "Feast" | "Fast";
+}
+
+export interface UpcomingFeastsAndFastsResult {
+  items: FeastFastItem[];
+  error: string | null;
+}
+
+export async function fetchUpcomingFeastsAndFasts(): Promise<UpcomingFeastsAndFastsResult> {
+  const timeMin = new Date();
+  const timeMax = new Date(timeMin);
+  timeMax.setDate(timeMax.getDate() + FEAST_FAST_WINDOW_DAYS);
+
+  const result = await fetchEventsInRange(timeMin, timeMax);
+  if (result.error) return { items: [], error: result.error };
+
+  const items = result.events
+    .filter((event) => new Date(event.start) >= timeMin)
+    .filter((event) => FEAST_PATTERN.test(event.title) || FAST_PATTERN.test(event.title))
+    .sort((first, second) => new Date(first.start).getTime() - new Date(second.start).getTime())
+    .slice(0, FEAST_FAST_LIMIT)
+    .map((event) => ({ event, kind: FEAST_PATTERN.test(event.title) ? ("Feast" as const) : ("Fast" as const) }));
+
+  return { items, error: null };
+}
+
+async function fetchEventsInRange(timeMin: Date, timeMax: Date): Promise<MonthEventsResult> {
+  if (!hasGoogleCalendarConfig()) {
+    return { events: [], error: "not-configured" };
+  }
 
   const calendarId = encodeURIComponent(process.env.GOOGLE_CALENDAR_ID as string);
   const params = new URLSearchParams({
@@ -122,8 +178,10 @@ function normalizeAttachment(attachment: RawGoogleAttachment): CalendarAttachmen
     mimeType,
     fileUrl: attachment.fileUrl ?? "",
     iconLink: attachment.iconLink ?? "",
-    // The legacy uc?export=view endpoint blocks embedded <img> requests even for public files;
-    // the thumbnail endpoint is what Drive actually serves for hotlinking.
-    imageSrc: isImage && attachment.fileId ? `https://drive.google.com/thumbnail?id=${attachment.fileId}&sz=w2000` : null,
+    // The legacy uc?export=view endpoint blocks embedded <img> requests even for public files,
+    // and drive.google.com/thumbnail rate-limits hotlinked requests hard (429s within a handful
+    // of loads). lh3.googleusercontent.com/d/... is the actual image host thumbnail redirects to,
+    // and serves hotlinked requests directly without that throttling.
+    imageSrc: isImage && attachment.fileId ? `https://lh3.googleusercontent.com/d/${attachment.fileId}=w2000` : null,
   };
 }

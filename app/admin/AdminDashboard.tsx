@@ -13,20 +13,22 @@ import {
   type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
-import type { CalendarEvent, FeaturedEvent, Moment } from "../data";
+import type { CalendarEvent, FeaturedEvent, GalleryPhoto, Moment } from "../data";
 
 interface EditableContent {
   featuredEvents: FeaturedEvent[];
   calendarEvents: CalendarEvent[];
   moments: Moment[];
+  galleryPhotos: GalleryPhoto[];
 }
 
-type AdminTab = "featured" | "calendar" | "moments";
+type AdminTab = "featured" | "calendar" | "moments" | "gallery";
 
 const tabs: Array<{ id: AdminTab; label: string }> = [
   { id: "featured", label: "Featured" },
   { id: "calendar", label: "Calendar" },
   { id: "moments", label: "Moments" },
+  { id: "gallery", label: "Gallery" },
 ];
 
 export function AdminDashboard() {
@@ -45,7 +47,7 @@ export function AdminDashboard() {
   const contentCount = useMemo(() => {
     if (!content) return "";
 
-    return `${content.featuredEvents.length} featured, ${content.calendarEvents.length} calendar, ${content.moments.length} moments`;
+    return `${content.featuredEvents.length} featured, ${content.calendarEvents.length} calendar, ${content.moments.length} moments, ${content.galleryPhotos.length} gallery`;
   }, [content]);
 
   useEffect(() => {
@@ -197,6 +199,53 @@ export function AdminDashboard() {
       contentRef.current = next;
       return next;
     });
+  };
+
+  const updateGalleryPhoto = (index: number, patch: Partial<GalleryPhoto>) => {
+    setContent((current) =>
+      current
+        ? {
+            ...current,
+            galleryPhotos: updateItem(current.galleryPhotos, index, patch),
+          }
+        : current,
+    );
+  };
+
+  const updateGalleryPhotoById = (id: string, patch: Partial<GalleryPhoto>) => {
+    setContent((current) => {
+      const next = current
+        ? {
+            ...current,
+            galleryPhotos: current.galleryPhotos.map((photo) => (photo.id === id ? { ...photo, ...patch } : photo)),
+          }
+        : current;
+
+      contentRef.current = next;
+      return next;
+    });
+  };
+
+  const addGalleryPhoto = () => {
+    const id = uniqueId("gallery-photo");
+
+    setContent((current) =>
+      current
+        ? {
+            ...current,
+            galleryPhotos: [
+              ...current.galleryPhotos,
+              {
+                id,
+                src: "",
+                alt: "OTY NYC gallery photo",
+              },
+            ],
+          }
+        : current,
+    );
+    setActiveTab("gallery");
+    setPendingFocusId(id);
   };
 
   const addFeaturedEvent = () => {
@@ -411,6 +460,7 @@ export function AdminDashboard() {
                 <ImageUpload
                   label="Image"
                   value={event.image}
+                  folder="events"
                   onChange={(value) => updateFeaturedEventById(event.id, { image: value })}
                   onUploadingChange={(uploading) => setActiveUploads((count) => Math.max(0, count + (uploading ? 1 : -1)))}
                 />
@@ -473,11 +523,43 @@ export function AdminDashboard() {
                 <ImageUpload
                   label="Image"
                   value={moment.image}
+                  folder="moments"
                   onChange={(value) => updateMomentById(moment.id, { image: value })}
                   onUploadingChange={(uploading) => setActiveUploads((count) => Math.max(0, count + (uploading ? 1 : -1)))}
                 />
                 <Input label="Alt Text" value={moment.alt} onChange={(value) => updateMoment(index, { alt: value })} />
                 <TextArea label="Details" value={moment.details} onChange={(value) => updateMoment(index, { details: value })} />
+              </EditorCard>
+            ))}
+          </ContentSection>
+        )}
+
+        {content && activeTab === "gallery" && (
+          <ContentSection title="Home Page Gallery" onAdd={addGalleryPhoto}>
+            {content.galleryPhotos.map((photo, index) => (
+              <EditorCard
+                key={photo.id}
+                itemId={photo.id}
+                title={photo.alt || photo.id}
+                onDelete={() =>
+                  setContent((current) => (current ? { ...current, galleryPhotos: removeItem(current.galleryPhotos, index) } : current))
+                }
+                onMoveDown={() =>
+                  setContent((current) => (current ? { ...current, galleryPhotos: moveItem(current.galleryPhotos, index, 1) } : current))
+                }
+                onMoveUp={() =>
+                  setContent((current) => (current ? { ...current, galleryPhotos: moveItem(current.galleryPhotos, index, -1) } : current))
+                }
+              >
+                <Input label="ID" value={photo.id} onChange={(value) => updateGalleryPhoto(index, { id: slugify(value) })} />
+                <ImageUpload
+                  label="Photo"
+                  value={photo.src}
+                  folder="gallery"
+                  onChange={(value) => updateGalleryPhotoById(photo.id, { src: value })}
+                  onUploadingChange={(uploading) => setActiveUploads((count) => Math.max(0, count + (uploading ? 1 : -1)))}
+                />
+                <Input label="Alt Text" value={photo.alt} onChange={(value) => updateGalleryPhoto(index, { alt: value })} />
               </EditorCard>
             ))}
           </ContentSection>
@@ -566,11 +648,13 @@ function TextArea({ label, onChange, value }: { label: string; onChange: (value:
 }
 
 function ImageUpload({
+  folder,
   label,
   onChange,
   onUploadingChange,
   value,
 }: {
+  folder: string;
   label: string;
   onChange: (value: string) => void;
   onUploadingChange: (uploading: boolean) => void;
@@ -603,7 +687,7 @@ function ImageUpload({
     onUploadingChange(true);
 
     try {
-      const blob = await upload(uploadPathFor(file), file, {
+      const blob = await upload(uploadPathFor(file, folder), file, {
         access: "public",
         contentType,
         handleUploadUrl: "/api/admin/uploads",
@@ -678,7 +762,7 @@ const imageTypesByExtension: Record<string, string> = {
   webp: "image/webp",
 };
 
-function uploadPathFor(file: File) {
+function uploadPathFor(file: File, folder: string) {
   const extension = extensionFor(file);
   const name = file.name
     .replace(/\.[^.]+$/, "")
@@ -687,7 +771,7 @@ function uploadPathFor(file: File) {
     .replace(/(^-|-$)/g, "")
     .slice(0, 64);
 
-  return `uploads/${Date.now()}-${name || "upload"}.${extension}`;
+  return `uploads/${folder}/${Date.now()}-${name || "upload"}.${extension}`;
 }
 
 function extensionFor(file: File) {

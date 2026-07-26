@@ -30,6 +30,7 @@ export async function saveEditableContent(content: EditableContent) {
       { path: "content/featured-events.json", data: content.featuredEvents },
       { path: "content/calendar-events.json", data: content.calendarEvents },
       { path: "content/moments.json", data: content.moments },
+      { path: "content/gallery.json", data: content.galleryPhotos },
     ];
 
     await Promise.all(files.map((file) => writeFile(join(process.cwd(), file.path), serializeJson(file.data), "utf8")));

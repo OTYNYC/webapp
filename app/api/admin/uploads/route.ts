@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 }
 
 function validateUploadPath(pathname: string) {
-  if (!/^uploads\/[a-z0-9][a-z0-9-]{0,80}\.(avif|gif|jpe?g|png|webp)$/i.test(pathname)) {
+  if (!/^uploads\/(?:[a-z0-9-]{1,40}\/)?[a-z0-9][a-z0-9-]{0,80}\.(avif|gif|jpe?g|png|webp)$/i.test(pathname)) {
     throw new Error("Invalid upload path.");
   }
 

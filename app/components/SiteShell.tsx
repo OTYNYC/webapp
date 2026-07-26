@@ -2,60 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { InstagramIcon, MailIcon } from "./QuickInfoIcons";
 
 const navItems = [
-  { label: "Mission", href: "/#mission", activePath: "" },
+  { label: "Home", href: "/home", activePath: "/home" },
   { label: "Current", href: "/#current", activePath: "" },
-  { label: "Churches", href: "/churches", activePath: "/churches" },
+  { label: "Church Directory", href: "/churches", activePath: "/churches" },
   { label: "Calendar", href: "/calendar", activePath: "/calendar" },
-  { label: "Fasting Food", href: "/fasting", activePath: "/fasting" },
+  { label: "Resources", href: "/fasting", activePath: "/fasting" },
 ];
 
 export function SiteShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
-  const [headerScrolled, setHeaderScrolled] = useState(false);
-  const [headerHidden, setHeaderHidden] = useState(false);
-  const lastScrollY = useRef(0);
-  const navOpenRef = useRef(false);
-  const solidHeader = pathname !== "/" || headerScrolled || navOpen;
+  const solidHeader = navOpen;
+  const isHome = pathname === "/home";
 
   useEffect(() => {
     setNavOpen(false);
   }, [pathname]);
-
-  useEffect(() => {
-    navOpenRef.current = navOpen;
-    if (navOpen) setHeaderHidden(false);
-  }, [navOpen]);
-
-  useEffect(() => {
-    const updateHeader = () => {
-      const currentScrollY = window.scrollY;
-      const scrollDelta = currentScrollY - lastScrollY.current;
-
-      setHeaderScrolled(currentScrollY > 20);
-
-      if (navOpenRef.current || currentScrollY < 80) {
-        setHeaderHidden(false);
-      } else if (scrollDelta > 8) {
-        setHeaderHidden(true);
-      } else if (scrollDelta < -8) {
-        setHeaderHidden(false);
-      }
-
-      if (Math.abs(scrollDelta) > 4) {
-        lastScrollY.current = currentScrollY;
-      }
-    };
-
-    lastScrollY.current = window.scrollY;
-    updateHeader();
-    window.addEventListener("scroll", updateHeader, { passive: true });
-
-    return () => window.removeEventListener("scroll", updateHeader);
-  }, []);
 
   return (
     <>
@@ -63,12 +29,12 @@ export function SiteShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
 
-      <header className={`site-header${solidHeader ? " scrolled" : ""}${headerHidden ? " hidden" : ""}`}>
-        <Link className="brand" href="/" aria-label="OTY NYC home">
-          <img src="/assets/oty-logo.png" alt="OTY NYC logo" width="64" height="56" />
-          <span>
-            <strong>OTY NYC</strong>
-            <small>Orthodox Tewahedo Youth</small>
+      <header className={`site-header${solidHeader ? " scrolled" : ""}${isHome ? " header-transparent" : ""}`}>
+        <Link className="home-brand" href="/" aria-label="OTY NYC home">
+          <img className="home-brand-mark" src="/assets/oty-logo-mark.png" alt="OTY NYC" width="515" height="322" />
+          <span className="home-brand-text">
+            <span className="home-brand-text-full">Orthodox Tewahedo Youth in New York City</span>
+            <span className="home-brand-text-short">OTY NYC</span>
           </span>
         </Link>
 
@@ -111,10 +77,22 @@ export function SiteShell({ children }: { children: ReactNode }) {
 
       <footer className="site-footer">
         <p>OTY NYC - Orthodox Tewahedo Youth in New York City</p>
-        <div>
-          <a href="mailto:contact.otynyc@gmail.com">contact.otynyc@gmail.com</a>
-          <a href="https://instagram.com/oty.nyc" target="_blank" rel="noreferrer">
-            @oty.nyc
+        <div className="footer-actions">
+          <a
+            className="footer-button footer-button-email"
+            href="mailto:contact.otynyc@gmail.com"
+            aria-label="Email OTY NYC"
+          >
+            <MailIcon />
+          </a>
+          <a
+            className="footer-button footer-button-follow"
+            href="https://instagram.com/oty.nyc"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Follow OTY NYC on Instagram"
+          >
+            <InstagramIcon />
           </a>
         </div>
       </footer>

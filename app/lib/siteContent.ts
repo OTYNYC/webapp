@@ -1,10 +1,20 @@
 import { get, put } from "@vercel/blob";
-import { calendarEvents, featuredEvents, moments, type CalendarEvent, type FeaturedEvent, type Moment } from "../data";
+import {
+  calendarEvents,
+  featuredEvents,
+  galleryPhotos,
+  moments,
+  type CalendarEvent,
+  type FeaturedEvent,
+  type GalleryPhoto,
+  type Moment,
+} from "../data";
 
 export interface EditableContent {
   featuredEvents: FeaturedEvent[];
   calendarEvents: CalendarEvent[];
   moments: Moment[];
+  galleryPhotos: GalleryPhoto[];
 }
 
 export const SITE_CONTENT_BLOB_PATH = "content/site-content.json";
@@ -14,6 +24,7 @@ export function getFallbackSiteContent(): EditableContent {
     calendarEvents,
     featuredEvents,
     moments,
+    galleryPhotos,
   };
 }
 
@@ -56,6 +67,7 @@ export function normalizeEditableContent(input: unknown): EditableContent {
     featuredEvents: validateFeaturedEvents(record.featuredEvents),
     calendarEvents: validateCalendarEvents(record.calendarEvents),
     moments: validateMoments(record.moments),
+    galleryPhotos: validateGalleryPhotos(record.galleryPhotos),
   };
 }
 
@@ -107,6 +119,18 @@ function validateMoments(input: unknown): Moment[] {
       alt: requireText(record.alt, `moments[${index}].alt`),
       details: requireText(record.details, `moments[${index}].details`),
       published: Boolean(record.published),
+    };
+  });
+}
+
+function validateGalleryPhotos(input: unknown): GalleryPhoto[] {
+  return requireArray(input, "galleryPhotos").map((photo, index) => {
+    const record = requireRecord(photo, `galleryPhotos[${index}]`);
+
+    return {
+      id: requireText(record.id, `galleryPhotos[${index}].id`),
+      src: requireImagePath(record.src, `galleryPhotos[${index}].src`),
+      alt: requireText(record.alt, `galleryPhotos[${index}].alt`),
     };
   });
 }
