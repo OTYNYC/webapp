@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { MonthCalendar } from "../components/MonthCalendar";
-import { fetchMonthEvents, hasGoogleCalendarConfig } from "../lib/googleCalendar";
+import { fetchMonthEvents, hasGoogleCalendarConfig, isCalendarUnavailable } from "../lib/googleCalendar";
 import { addMonths, toDateKey } from "../lib/monthGrid";
 
 export const metadata: Metadata = {
@@ -68,7 +68,10 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
       </section>
 
       <section className="section route-section" aria-label="Google Calendar month view">
-        {error && <p className="calendar-error">{error}</p>}
+        {/* Google's raw error text is internal detail - show visitors a generic notice. */}
+        {isCalendarUnavailable(error) && (
+          <p className="calendar-error">This month&apos;s events could not be loaded. Please try again shortly.</p>
+        )}
         <MonthCalendar
           events={events}
           year={year}

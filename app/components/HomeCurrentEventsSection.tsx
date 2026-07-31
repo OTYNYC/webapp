@@ -8,10 +8,17 @@ import { UpcomingFeaturedEvent } from "./UpcomingFeaturedEvent";
 
 interface HomeCurrentEventsSectionProps {
   featuredCalendarEvents: CalendarEventDetail[];
+  featuredUnavailable?: boolean;
   feastFastItems: FeastFastItem[];
+  feastFastUnavailable?: boolean;
 }
 
-export function HomeCurrentEventsSection({ featuredCalendarEvents, feastFastItems }: HomeCurrentEventsSectionProps) {
+export function HomeCurrentEventsSection({
+  featuredCalendarEvents,
+  featuredUnavailable = false,
+  feastFastItems,
+  feastFastUnavailable = false,
+}: HomeCurrentEventsSectionProps) {
   return (
     <section className="current-strip home-current-events" id="current" aria-labelledby="events-title">
       <p className="section-kicker">Current Events</p>
@@ -26,7 +33,7 @@ export function HomeCurrentEventsSection({ featuredCalendarEvents, feastFastItem
         </Link>
       </div>
       <div className="current-layout">
-        <UpcomingFeaturedEvent events={featuredCalendarEvents} />
+        <UpcomingFeaturedEvent events={featuredCalendarEvents} unavailable={featuredUnavailable} />
 
         <div className="quick-info-panel" aria-live="polite">
           {feastFastItems.length > 0 ? (
@@ -47,8 +54,18 @@ export function HomeCurrentEventsSection({ featuredCalendarEvents, feastFastItem
                 <CrossIcon />
               </span>
               <div>
-                <strong>No upcoming feasts or fasts</strong>
-                <p>Check the full 2026 calendar for the complete schedule.</p>
+                {/* An unreachable calendar must not be reported as "nothing scheduled". */}
+                {feastFastUnavailable ? (
+                  <>
+                    <strong>Feasts and fasts are unavailable right now</strong>
+                    <p>We could not reach the calendar. Check the full 2026 calendar for the complete schedule.</p>
+                  </>
+                ) : (
+                  <>
+                    <strong>No upcoming feasts or fasts</strong>
+                    <p>Check the full 2026 calendar for the complete schedule.</p>
+                  </>
+                )}
               </div>
             </div>
           )}
