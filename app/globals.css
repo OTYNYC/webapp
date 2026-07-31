@@ -1466,8 +1466,13 @@ section[id],
   display: block;
   width: fit-content;
   max-width: 92vw;
-  white-space: nowrap;
   margin-bottom: 0.1em;
+}
+
+`@media` (min-width: 1100px) {
+  .gallery-swipe-title-line {
+    white-space: nowrap;
+  }
 }
 
 .gallery-swipe-controls {
