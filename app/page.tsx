@@ -2,7 +2,7 @@ import { GallerySwipe } from "./components/GallerySwipe";
 import { HomeCurrentEventsSection } from "./components/HomeCurrentEventsSection";
 import { PillarsSection } from "./components/PillarsSection";
 import { mission } from "./data";
-import { fetchUpcomingFeaturedEvents, fetchUpcomingFeastsAndFasts } from "./lib/googleCalendar";
+import { fetchUpcomingFeaturedEvents, fetchUpcomingFeastsAndFasts, isCalendarUnavailable } from "./lib/googleCalendar";
 import { loadSiteContent } from "./lib/siteContent";
 
 // No page-level metadata: as the site root this should carry the site title and
@@ -33,7 +33,12 @@ export default async function Home() {
     <main id="main">
       <GallerySwipe photos={content.galleryPhotos} />
 
-      <HomeCurrentEventsSection featuredCalendarEvents={featuredResult.events} feastFastItems={feastFastResult.items} />
+      <HomeCurrentEventsSection
+        featuredCalendarEvents={featuredResult.events}
+        featuredUnavailable={isCalendarUnavailable(featuredResult.error)}
+        feastFastItems={feastFastResult.items}
+        feastFastUnavailable={isCalendarUnavailable(feastFastResult.error)}
+      />
 
       <section className="section mission-section home-mission-section" id="mission" aria-labelledby="mission-title">
         <div className="mission-copy">

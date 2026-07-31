@@ -52,8 +52,18 @@ interface RawGoogleEventsResponse {
   error?: { message?: string };
 }
 
+// Returned when the calendar credentials are absent. That is an expected deployment
+// state, not a failure, so callers must not surface it as an outage.
+export const CALENDAR_NOT_CONFIGURED = "not-configured";
+
 export function hasGoogleCalendarConfig() {
   return Boolean(process.env.GOOGLE_CALENDAR_API_KEY && process.env.GOOGLE_CALENDAR_ID);
+}
+
+// True only for a real fetch failure. Lets callers tell "we could not reach the calendar"
+// apart from "there is genuinely nothing scheduled" and from "no calendar is connected".
+export function isCalendarUnavailable(error: string | null): boolean {
+  return error !== null && error !== CALENDAR_NOT_CONFIGURED;
 }
 
 export async function fetchMonthEvents(year: number, month: number): Promise<MonthEventsResult> {
@@ -128,7 +138,7 @@ export async function fetchUpcomingFeastsAndFasts(): Promise<UpcomingFeastsAndFa
 
 async function fetchEventsInRange(timeMin: Date, timeMax: Date): Promise<MonthEventsResult> {
   if (!hasGoogleCalendarConfig()) {
-    return { events: [], error: "not-configured" };
+    return { events: [], error: CALENDAR_NOT_CONFIGURED };
   }
 
   const calendarId = encodeURIComponent(process.env.GOOGLE_CALENDAR_ID as string);

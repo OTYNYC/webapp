@@ -5,7 +5,13 @@ import { ChevronIcon } from "./ChevronIcon";
 import { formatEventDateTime, isFeaturedEvent, parseEventDescription, stripFeaturedPrefix } from "../lib/eventDisplay";
 import type { CalendarEventDetail } from "../lib/googleCalendar";
 
-export function UpcomingFeaturedEvent({ events }: { events: CalendarEventDetail[] }) {
+export function UpcomingFeaturedEvent({
+  events,
+  unavailable = false,
+}: {
+  events: CalendarEventDetail[];
+  unavailable?: boolean;
+}) {
   const [activeIndex, setActiveIndex] = useState(0);
 
   if (events.length === 0) {
@@ -13,8 +19,18 @@ export function UpcomingFeaturedEvent({ events }: { events: CalendarEventDetail[
       <article className="featured-event empty-featured">
         <div className="featured-event-body">
           <span className="event-meta">Featured Event</span>
-          <h3>More OTY events coming soon</h3>
-          <p>Check back for upcoming learning, fellowship and service events.</p>
+          {/* Only claim there is nothing scheduled when the calendar actually answered. */}
+          {unavailable ? (
+            <>
+              <h3>Events are unavailable right now</h3>
+              <p>We could not reach the calendar. Please try again shortly, or view the full calendar.</p>
+            </>
+          ) : (
+            <>
+              <h3>More OTY events coming soon</h3>
+              <p>Check back for upcoming learning, fellowship and service events.</p>
+            </>
+          )}
         </div>
       </article>
     );
