@@ -67,7 +67,10 @@ export function normalizeEditableContent(input: unknown): EditableContent {
     featuredEvents: validateFeaturedEvents(record.featuredEvents),
     calendarEvents: validateCalendarEvents(record.calendarEvents),
     moments: validateMoments(record.moments),
-    galleryPhotos: validateGalleryPhotos(record.galleryPhotos),
+    galleryPhotos:
+      record.galleryPhotos === undefined
+        ? galleryPhotos
+        : validateGalleryPhotos(record.galleryPhotos),
   };
 }
 
