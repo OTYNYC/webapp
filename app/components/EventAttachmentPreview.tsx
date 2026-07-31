@@ -14,10 +14,23 @@ export function EventAttachmentPreview({ attachment }: { attachment: CalendarAtt
     );
   }
 
+  const href = attachment.fileUrl || attachment.imageSrc;
+  const label = imageFailed ? "View image (not public yet)" : attachment.title;
+
+  if (!href) {
+    return (
+      <span className="attachment-file">
+        {attachment.iconLink && <img src={attachment.iconLink} alt="" width="16" height="16" />}
+        {label}
+      </span>
+    );
+  }
+
   return (
-    <a className="attachment-file" href={attachment.fileUrl} target="_blank" rel="noreferrer">
+    <a className="attachment-file" href={href} target="_blank" rel="noreferrer">
       {attachment.iconLink && <img src={attachment.iconLink} alt="" width="16" height="16" />}
-      {imageFailed ? "View image (not public yet)" : attachment.title}
+      {label}
     </a>
+  );
   );
 }
