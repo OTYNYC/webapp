@@ -1,10 +1,20 @@
 import { get, put } from "@vercel/blob";
-import { calendarEvents, featuredEvents, moments, type CalendarEvent, type FeaturedEvent, type Moment } from "../data";
+import {
+  calendarEvents,
+  featuredEvents,
+  galleryPhotos,
+  moments,
+  type CalendarEvent,
+  type FeaturedEvent,
+  type GalleryPhoto,
+  type Moment,
+} from "../data";
 
 export interface EditableContent {
   featuredEvents: FeaturedEvent[];
   calendarEvents: CalendarEvent[];
   moments: Moment[];
+  galleryPhotos: GalleryPhoto[];
 }
 
 export const SITE_CONTENT_BLOB_PATH = "content/site-content.json";
@@ -14,6 +24,7 @@ export function getFallbackSiteContent(): EditableContent {
     calendarEvents,
     featuredEvents,
     moments,
+    galleryPhotos,
   };
 }
 
@@ -56,7 +67,32 @@ export function normalizeEditableContent(input: unknown): EditableContent {
     featuredEvents: validateFeaturedEvents(record.featuredEvents),
     calendarEvents: validateCalendarEvents(record.calendarEvents),
     moments: validateMoments(record.moments),
+    galleryPhotos:
+      record.galleryPhotos === undefined
+        ? galleryPhotos
+        : validateGalleryPhotos(record.galleryPhotos),
   };
+}
+
+// Ids are admin-editable but are used as React keys and as lookup handles, so duplicates
+// must not reach storage. This is deliberately separate from normalizeEditableContent:
+// that runs on the public read path too, where loadSiteContent swallows any throw and
+// serves fallback content, so a strict check there would blank the site instead of
+// reporting the problem. Enforce it only where an admin can see and fix the error.
+export function assertUniqueContentIds(content: EditableContent) {
+  requireUniqueIds(content.featuredEvents, "featuredEvents");
+  requireUniqueIds(content.calendarEvents, "calendarEvents");
+  requireUniqueIds(content.moments, "moments");
+  requireUniqueIds(content.galleryPhotos, "galleryPhotos");
+}
+
+function requireUniqueIds(items: Array<{ id: string }>, label: string) {
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    if (seen.has(item.id)) throw new Error(`${label} contains a duplicate id: ${item.id}.`);
+    seen.add(item.id);
+  }
 }
 
 export function serializeJson(data: unknown) {
@@ -107,6 +143,18 @@ function validateMoments(input: unknown): Moment[] {
       alt: requireText(record.alt, `moments[${index}].alt`),
       details: requireText(record.details, `moments[${index}].details`),
       published: Boolean(record.published),
+    };
+  });
+}
+
+function validateGalleryPhotos(input: unknown): GalleryPhoto[] {
+  return requireArray(input, "galleryPhotos").map((photo, index) => {
+    const record = requireRecord(photo, `galleryPhotos[${index}]`);
+
+    return {
+      id: requireText(record.id, `galleryPhotos[${index}].id`),
+      src: requireImagePath(record.src, `galleryPhotos[${index}].src`),
+      alt: requireText(record.alt, `galleryPhotos[${index}].alt`),
     };
   });
 }

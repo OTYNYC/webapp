@@ -1,6 +1,7 @@
 import calendarEventsJson from "../content/calendar-events.json";
 import churchesJson from "../content/churches.json";
 import featuredEventsJson from "../content/featured-events.json";
+import galleryJson from "../content/gallery.json";
 import missionJson from "../content/mission.json";
 import momentsJson from "../content/moments.json";
 
@@ -55,6 +56,12 @@ export interface MissionContent {
   focusAreas: string[];
 }
 
+export interface GalleryPhoto {
+  id: string;
+  src: string;
+  alt: string;
+}
+
 export const churches = churchesJson satisfies Church[];
 
 export const calendarEvents = calendarEventsJson satisfies CalendarEvent[];
@@ -64,5 +71,7 @@ export const featuredEvents = featuredEventsJson satisfies FeaturedEvent[];
 export const moments = momentsJson satisfies Moment[];
 
 export const mission = missionJson satisfies MissionContent;
+
+export const galleryPhotos = galleryJson satisfies GalleryPhoto[];
 
 export const boroughs = ["All", "Bronx", "Brooklyn", "Manhattan", "Queens"];

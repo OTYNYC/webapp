@@ -1,7 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { Cormorant_Garamond, Raleway } from "next/font/google";
 import type { ReactNode } from "react";
 import { SiteShell } from "./components/SiteShell";
 import "./globals.css";
+
+const raleway = Raleway({
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700"],
+  variable: "--font-raleway",
+});
+
+const cormorantGaramond = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-cormorant-garamond",
+});
 
 export const metadata: Metadata = {
   title: "OTY NYC | Orthodox Tewahedo Youth in New York City",
@@ -20,7 +33,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body className={`${raleway.variable} ${cormorantGaramond.variable}`}>
         <SiteShell>{children}</SiteShell>
       </body>
     </html>
