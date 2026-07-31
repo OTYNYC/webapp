@@ -39,7 +39,7 @@ export function UpcomingFeaturedEvent({ events }: { events: CalendarEventDetail[
           </button>
         </div>
       )}
-      <FeaturedEventCard event={event} />
+      <FeaturedEventCard event={event} key={event.id} />
     </div>
   );
 }
