@@ -6,8 +6,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { InstagramIcon, MailIcon } from "./QuickInfoIcons";
 
 const navItems = [
-  { label: "Home", href: "/home", activePath: "/home" },
-  { label: "Current", href: "/home#current", activePath: "" },
+  { label: "Home", href: "/", activePath: "/" },
+  { label: "Current", href: "/#current", activePath: "" },
   { label: "Church Directory", href: "/churches", activePath: "/churches" },
   { label: "Calendar", href: "/calendar", activePath: "/calendar" },
   { label: "Resources", href: "/fasting", activePath: "/fasting" },
@@ -17,7 +17,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
   const solidHeader = navOpen;
-  const isHome = pathname === "/home";
+  const isHome = pathname === "/";
 
   useEffect(() => {
     setNavOpen(false);
@@ -30,7 +30,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
       </a>
 
       <header className={`site-header${solidHeader ? " scrolled" : ""}${isHome ? " header-transparent" : ""}`}>
-        <Link className="home-brand" href="/home" aria-label="OTY NYC home">
+        <Link className="home-brand" href="/" aria-label="OTY NYC home">
           <img className="home-brand-mark" src="/assets/oty-logo-mark.png" alt="OTY NYC" width="515" height="322" />
           <span className="home-brand-text">
             <span className="home-brand-text-full">Orthodox Tewahedo Youth in New York City</span>
