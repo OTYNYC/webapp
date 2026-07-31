@@ -32,5 +32,4 @@ export function EventAttachmentPreview({ attachment }: { attachment: CalendarAtt
       {label}
     </a>
   );
-  );
 }

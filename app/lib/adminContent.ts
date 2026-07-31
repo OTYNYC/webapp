@@ -1,6 +1,13 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { hasBlobStorage, loadSiteContent, normalizeEditableContent, saveSiteContent, serializeJson } from "./siteContent";
+import {
+  assertUniqueContentIds,
+  hasBlobStorage,
+  loadSiteContent,
+  normalizeEditableContent,
+  saveSiteContent,
+  serializeJson,
+} from "./siteContent";
 import type { EditableContent } from "./siteContent";
 
 export async function getEditableContent(): Promise<EditableContent> {
@@ -15,7 +22,11 @@ export function getSaveTarget() {
 }
 
 export function validateEditableContent(input: unknown): EditableContent {
-  return normalizeEditableContent(input);
+  const content = normalizeEditableContent(input);
+
+  assertUniqueContentIds(content);
+
+  return content;
 }
 
 export async function saveEditableContent(content: EditableContent) {

@@ -6,7 +6,9 @@
   --surface: #ffffff;
   --surface-warm: #f5eddf;
   --gold: #daa739;
-  --gold-dark: #daa739;
+  /* Gold is a background/accent tone - it only reaches 1.97:1 on paper, so text and icons
+     that need to be legible use this darker variant instead (5.7:1 on paper). */
+  --gold-dark: #7a5a12;
   --green: #275f54;
   --green-dark: #163b35;
   --coral: #d96c4c;
@@ -407,7 +409,7 @@ input {
 }
 
 .button-primary {
-  color: var(--paper);
+  color: var(--ink);
   background: var(--gold);
   box-shadow: 0 14px 26px rgba(89, 53, 0, 0.18);
 }
@@ -1083,7 +1085,9 @@ section[id],
   justify-content: center;
   justify-self: end;
   text-align: center;
-  aspect-ratio: 5 / 4;
+  /* A floor rather than aspect-ratio: the card holds flowing text, and a fixed ratio
+     turns a ~280px-wide column into a ~224px-tall box that the quote overflows. */
+  min-height: min(32rem, 80vw);
   width: 100%;
   max-width: 40rem;
   gap: 0.05rem;
@@ -1109,7 +1113,7 @@ section[id],
 }
 
 .testimonial-mark-close {
-  margin-top: 4rem;
+  margin-top: clamp(1rem, 6vw, 4rem);
 }
 
 .testimonial p {
@@ -1469,7 +1473,7 @@ section[id],
   margin-bottom: 0.1em;
 }
 
-`@media` (min-width: 1100px) {
+@media (min-width: 1100px) {
   .gallery-swipe-title-line {
     white-space: nowrap;
   }
@@ -1518,23 +1522,37 @@ section[id],
   bottom: clamp(1rem, 3vw, 1.75rem);
   z-index: 2;
   display: flex;
-  gap: 0.45rem;
+  gap: 0.1rem;
   transform: translateX(-50%);
 }
 
+/* The button itself is a transparent 24px target (WCAG 2.5.8) and the visible dot is
+   drawn by the pseudo-element, so the control stays easy to hit without growing the mark. */
 .gallery-swipe-dots button {
+  position: relative;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.gallery-swipe-dots button::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 0.6rem;
   height: 0.6rem;
   border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 999px;
-  padding: 0;
   background: rgba(255, 255, 255, 0.4);
-  cursor: pointer;
+  transform: translate(-50%, -50%);
 }
 
-.gallery-swipe-dots button.active {
+.gallery-swipe-dots button.active::before {
   width: 1.4rem;
-  border-radius: 999px;
   background: white;
 }
 
@@ -2785,7 +2803,7 @@ section[id],
   padding: 0;
   border: none;
   border-radius: 0;
-  color: var(--gold);
+  color: var(--gold-dark);
   background: transparent;
 }
 
@@ -2807,7 +2825,7 @@ section[id],
   padding: 0;
   border: none;
   border-radius: 0;
-  color: var(--gold);
+  color: var(--gold-dark);
   background: transparent;
 }
 

@@ -1,4 +1,4 @@
-import { isFeaturedEvent } from "./eventDisplay";
+import { calendarDayKey, eventDayKey, getFeastFastPrefix, isFeaturedEvent } from "./eventDisplay";
 import { getMonthGridDays } from "./monthGrid";
 
 const CALENDAR_API_BASE = "https://www.googleapis.com/calendar/v3/calendars";
@@ -76,17 +76,22 @@ export async function fetchUpcomingFeaturedEvents(): Promise<MonthEventsResult> 
   if (result.error) return result;
 
   const matching = result.events
-    .filter((event) => new Date(event.start) >= timeMin)
+    .filter(isCurrentOrUpcoming)
     .filter((event) => isFeaturedEvent(event.title))
     .sort((first, second) => new Date(first.start).getTime() - new Date(second.start).getTime());
 
   return { events: matching, error: null };
 }
 
+// Google already drops anything that ended before timeMin, so the only thing left to
+// exclude is an event that finished earlier today. Filtering on `start >= timeMin` instead
+// would hide every event already in progress, including all of today's all-day events.
+function isCurrentOrUpcoming(event: CalendarEventDetail): boolean {
+  return eventDayKey(event, "end") >= calendarDayKey(new Date());
+}
+
 const FEAST_FAST_WINDOW_DAYS = 400;
 const FEAST_FAST_LIMIT = 3;
-const FEAST_PATTERN = /\bfeast\b/i;
-const FAST_PATTERN = /\bfast\b/i;
 
 export interface FeastFastItem {
   event: CalendarEventDetail;
@@ -106,12 +111,17 @@ export async function fetchUpcomingFeastsAndFasts(): Promise<UpcomingFeastsAndFa
   const result = await fetchEventsInRange(timeMin, timeMax);
   if (result.error) return { items: [], error: result.error };
 
+  // Match on the same "LABEL: Title" prefix that stripFeastFastPrefix removes for display,
+  // so the filter and the rendered title can never disagree about what the label is.
   const items = result.events
-    .filter((event) => new Date(event.start) >= timeMin)
-    .filter((event) => FEAST_PATTERN.test(event.title) || FAST_PATTERN.test(event.title))
-    .sort((first, second) => new Date(first.start).getTime() - new Date(second.start).getTime())
-    .slice(0, FEAST_FAST_LIMIT)
-    .map((event) => ({ event, kind: FEAST_PATTERN.test(event.title) ? ("Feast" as const) : ("Fast" as const) }));
+    .filter(isCurrentOrUpcoming)
+    .flatMap((event) => {
+      const kind = getFeastFastPrefix(event.title);
+
+      return kind ? [{ event, kind }] : [];
+    })
+    .sort((first, second) => new Date(first.event.start).getTime() - new Date(second.event.start).getTime())
+    .slice(0, FEAST_FAST_LIMIT);
 
   return { items, error: null };
 }

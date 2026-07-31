@@ -15,11 +15,24 @@ import {
 import { flushSync } from "react-dom";
 import type { CalendarEvent, FeaturedEvent, GalleryPhoto, Moment } from "../data";
 
-interface EditableContent {
+interface StoredContent {
   featuredEvents: FeaturedEvent[];
   calendarEvents: CalendarEvent[];
   moments: Moment[];
   galleryPhotos: GalleryPhoto[];
+}
+
+// Item ids are admin-editable, so they cannot identify a card: renaming one while an
+// upload is in flight would strand the finished upload, and two cards sharing an id would
+// both get patched (and collide as React keys). `uid` is a client-only stable handle,
+// attached when content loads and stripped again before saving.
+type Identified<T> = T & { uid: string };
+
+interface EditableContent {
+  featuredEvents: Identified<FeaturedEvent>[];
+  calendarEvents: Identified<CalendarEvent>[];
+  moments: Identified<Moment>[];
+  galleryPhotos: Identified<GalleryPhoto>[];
 }
 
 type AdminTab = "featured" | "calendar" | "moments" | "gallery";
@@ -72,9 +85,9 @@ export function AdminDashboard() {
       return;
     }
 
-    const payload = (await response.json()) as { content: EditableContent; saveTarget: string };
+    const payload = (await response.json()) as { content: StoredContent; saveTarget: string };
 
-    setContent(payload.content);
+    setContent(withUids(payload.content));
     setSaveTarget(payload.saveTarget);
     setStatus("ready");
   }, []);
@@ -124,9 +137,9 @@ export function AdminDashboard() {
     const response = await fetch("/api/admin/content", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(latestContent),
+      body: JSON.stringify(stripUids(latestContent)),
     });
-    const payload = (await response.json().catch(() => ({}))) as { content?: EditableContent; message?: string; mode?: string };
+    const payload = (await response.json().catch(() => ({}))) as { content?: StoredContent; message?: string; mode?: string };
 
     setSaving(false);
 
@@ -135,7 +148,7 @@ export function AdminDashboard() {
       return;
     }
 
-    setContent(payload.content);
+    setContent(withUids(payload.content));
     setSaveTarget(payload.mode || saveTarget);
     setMessage(payload.mode === "vercel-blob" ? "Saved to Vercel Blob. The public site will use the update now." : "Saved locally.");
   };
@@ -151,17 +164,21 @@ export function AdminDashboard() {
     );
   };
 
-  const updateFeaturedEventById = (id: string, patch: Partial<FeaturedEvent>) => {
-    setContent((current) => {
-      const next = current
-        ? {
-            ...current,
-            featuredEvents: current.featuredEvents.map((event) => (event.id === id ? { ...event, ...patch } : event)),
-          }
-        : current;
+  // Uploads resolve after the fact, so they patch by uid and write contentRef eagerly -
+  // `save` reads that ref and must see the uploaded URL even if it runs before the sync
+  // effect. The ref write stays outside the setter so the updater itself is pure.
+  const commit = (next: EditableContent) => {
+    contentRef.current = next;
+    setContent(next);
+  };
 
-      contentRef.current = next;
-      return next;
+  const updateFeaturedEventByUid = (uid: string, patch: Partial<FeaturedEvent>) => {
+    const current = contentRef.current;
+    if (!current) return;
+
+    commit({
+      ...current,
+      featuredEvents: current.featuredEvents.map((event) => (event.uid === uid ? { ...event, ...patch } : event)),
     });
   };
 
@@ -187,17 +204,13 @@ export function AdminDashboard() {
     );
   };
 
-  const updateMomentById = (id: string, patch: Partial<Moment>) => {
-    setContent((current) => {
-      const next = current
-        ? {
-            ...current,
-            moments: current.moments.map((moment) => (moment.id === id ? { ...moment, ...patch } : moment)),
-          }
-        : current;
+  const updateMomentByUid = (uid: string, patch: Partial<Moment>) => {
+    const current = contentRef.current;
+    if (!current) return;
 
-      contentRef.current = next;
-      return next;
+    commit({
+      ...current,
+      moments: current.moments.map((moment) => (moment.uid === uid ? { ...moment, ...patch } : moment)),
     });
   };
 
@@ -212,21 +225,18 @@ export function AdminDashboard() {
     );
   };
 
-  const updateGalleryPhotoById = (id: string, patch: Partial<GalleryPhoto>) => {
-    setContent((current) => {
-      const next = current
-        ? {
-            ...current,
-            galleryPhotos: current.galleryPhotos.map((photo) => (photo.id === id ? { ...photo, ...patch } : photo)),
-          }
-        : current;
+  const updateGalleryPhotoByUid = (uid: string, patch: Partial<GalleryPhoto>) => {
+    const current = contentRef.current;
+    if (!current) return;
 
-      contentRef.current = next;
-      return next;
+    commit({
+      ...current,
+      galleryPhotos: current.galleryPhotos.map((photo) => (photo.uid === uid ? { ...photo, ...patch } : photo)),
     });
   };
 
   const addGalleryPhoto = () => {
+    const uid = uniqueId("card");
     const id = uniqueId("gallery-photo");
 
     setContent((current) =>
@@ -236,6 +246,7 @@ export function AdminDashboard() {
             galleryPhotos: [
               ...current.galleryPhotos,
               {
+                uid,
                 id,
                 src: "",
                 alt: "OTY NYC gallery photo",
@@ -245,10 +256,11 @@ export function AdminDashboard() {
         : current,
     );
     setActiveTab("gallery");
-    setPendingFocusId(id);
+    setPendingFocusId(uid);
   };
 
   const addFeaturedEvent = () => {
+    const uid = uniqueId("card");
     const id = uniqueId("featured-event");
 
     setContent((current) =>
@@ -258,6 +270,7 @@ export function AdminDashboard() {
             featuredEvents: [
               ...current.featuredEvents,
               {
+                uid,
                 id,
                 label: "Featured Event",
                 title: "New featured event",
@@ -274,10 +287,11 @@ export function AdminDashboard() {
         : current,
     );
     setActiveTab("featured");
-    setPendingFocusId(id);
+    setPendingFocusId(uid);
   };
 
   const addCalendarEvent = () => {
+    const uid = uniqueId("card");
     const id = uniqueId("calendar-event");
 
     setContent((current) =>
@@ -287,6 +301,7 @@ export function AdminDashboard() {
             calendarEvents: [
               ...current.calendarEvents,
               {
+                uid,
                 id,
                 title: "New calendar event",
                 start: todayInputValue(),
@@ -297,10 +312,11 @@ export function AdminDashboard() {
         : current,
     );
     setActiveTab("calendar");
-    setPendingFocusId(id);
+    setPendingFocusId(uid);
   };
 
   const addMoment = () => {
+    const uid = uniqueId("card");
     const id = uniqueId("moment");
 
     setContent((current) =>
@@ -310,6 +326,7 @@ export function AdminDashboard() {
             moments: [
               ...current.moments,
               {
+                uid,
                 id,
                 label: "New Moment",
                 title: "New community moment",
@@ -323,7 +340,7 @@ export function AdminDashboard() {
         : current,
     );
     setActiveTab("moments");
-    setPendingFocusId(id);
+    setPendingFocusId(uid);
   };
 
   useEffect(() => {
@@ -427,8 +444,8 @@ export function AdminDashboard() {
           >
             {content.featuredEvents.map((event, index) => (
               <EditorCard
-                key={event.id}
-                itemId={event.id}
+                key={event.uid}
+                itemId={event.uid}
                 title={event.title}
                 onDelete={() =>
                   setContent((current) =>
@@ -461,7 +478,7 @@ export function AdminDashboard() {
                   label="Image"
                   value={event.image}
                   folder="events"
-                  onChange={(value) => updateFeaturedEventById(event.id, { image: value })}
+                  onChange={(value) => updateFeaturedEventByUid(event.uid, { image: value })}
                   onUploadingChange={(uploading) => setActiveUploads((count) => Math.max(0, count + (uploading ? 1 : -1)))}
                 />
                 <Input label="Alt Text" value={event.alt} onChange={(value) => updateFeaturedEvent(index, { alt: value })} />
@@ -477,8 +494,8 @@ export function AdminDashboard() {
           >
             {content.calendarEvents.map((event, index) => (
               <EditorCard
-                key={event.id}
-                itemId={event.id}
+                key={event.uid}
+                itemId={event.uid}
                 title={event.title}
                 onDelete={() =>
                   setContent((current) => (current ? { ...current, calendarEvents: removeItem(current.calendarEvents, index) } : current))
@@ -506,8 +523,8 @@ export function AdminDashboard() {
           >
             {content.moments.map((moment, index) => (
               <EditorCard
-                key={moment.id}
-                itemId={moment.id}
+                key={moment.uid}
+                itemId={moment.uid}
                 title={moment.title}
                 onDelete={() => setContent((current) => (current ? { ...current, moments: removeItem(current.moments, index) } : current))}
                 onMoveDown={() => setContent((current) => (current ? { ...current, moments: moveItem(current.moments, index, 1) } : current))}
@@ -524,7 +541,7 @@ export function AdminDashboard() {
                   label="Image"
                   value={moment.image}
                   folder="moments"
-                  onChange={(value) => updateMomentById(moment.id, { image: value })}
+                  onChange={(value) => updateMomentByUid(moment.uid, { image: value })}
                   onUploadingChange={(uploading) => setActiveUploads((count) => Math.max(0, count + (uploading ? 1 : -1)))}
                 />
                 <Input label="Alt Text" value={moment.alt} onChange={(value) => updateMoment(index, { alt: value })} />
@@ -538,8 +555,8 @@ export function AdminDashboard() {
           <ContentSection title="Home Page Gallery" onAdd={addGalleryPhoto}>
             {content.galleryPhotos.map((photo, index) => (
               <EditorCard
-                key={photo.id}
-                itemId={photo.id}
+                key={photo.uid}
+                itemId={photo.uid}
                 title={photo.alt || photo.id}
                 onDelete={() =>
                   setContent((current) => (current ? { ...current, galleryPhotos: removeItem(current.galleryPhotos, index) } : current))
@@ -556,7 +573,7 @@ export function AdminDashboard() {
                   label="Photo"
                   value={photo.src}
                   folder="gallery"
-                  onChange={(value) => updateGalleryPhotoById(photo.id, { src: value })}
+                  onChange={(value) => updateGalleryPhotoByUid(photo.uid, { src: value })}
                   onUploadingChange={(uploading) => setActiveUploads((count) => Math.max(0, count + (uploading ? 1 : -1)))}
                 />
                 <Input label="Alt Text" value={photo.alt} onChange={(value) => updateGalleryPhoto(index, { alt: value })} />
@@ -811,7 +828,9 @@ function extensionFromName(name: string) {
   return name.split(".").pop()?.toLowerCase() || "";
 }
 
-function updateItem<T>(items: T[], index: number, patch: Partial<T>) {
+// NoInfer keeps the element type anchored to `items`; without it a narrower `patch`
+// (e.g. Partial<GalleryPhoto> against Identified<GalleryPhoto>[]) widens T and drops uid.
+function updateItem<T>(items: T[], index: number, patch: Partial<NoInfer<T>>): T[] {
   return items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item));
 }
 
@@ -830,8 +849,42 @@ function moveItem<T>(items: T[], index: number, direction: -1 | 1) {
   return nextItems;
 }
 
+function withUids(content: StoredContent): EditableContent {
+  return {
+    featuredEvents: content.featuredEvents.map(attachUid),
+    calendarEvents: content.calendarEvents.map(attachUid),
+    moments: content.moments.map(attachUid),
+    galleryPhotos: content.galleryPhotos.map(attachUid),
+  };
+}
+
+function stripUids(content: EditableContent): StoredContent {
+  return {
+    featuredEvents: content.featuredEvents.map(detachUid),
+    calendarEvents: content.calendarEvents.map(detachUid),
+    moments: content.moments.map(detachUid),
+    galleryPhotos: content.galleryPhotos.map(detachUid),
+  };
+}
+
+function attachUid<T>(item: T): Identified<T> {
+  return { ...item, uid: uniqueId("card") };
+}
+
+function detachUid<T>(item: Identified<T>): T {
+  const { uid: _uid, ...rest } = item;
+
+  return rest as T;
+}
+
+// Date.now() alone repeats for anything created inside the same millisecond, which would
+// hand two cards the same uid (or the same generated content id).
+let idCounter = 0;
+
 function uniqueId(prefix: string) {
-  return `${prefix}-${Date.now().toString(36)}`;
+  idCounter += 1;
+
+  return `${prefix}-${Date.now().toString(36)}-${idCounter.toString(36)}`;
 }
 
 function slugify(value: string) {

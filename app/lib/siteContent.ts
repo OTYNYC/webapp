@@ -74,6 +74,27 @@ export function normalizeEditableContent(input: unknown): EditableContent {
   };
 }
 
+// Ids are admin-editable but are used as React keys and as lookup handles, so duplicates
+// must not reach storage. This is deliberately separate from normalizeEditableContent:
+// that runs on the public read path too, where loadSiteContent swallows any throw and
+// serves fallback content, so a strict check there would blank the site instead of
+// reporting the problem. Enforce it only where an admin can see and fix the error.
+export function assertUniqueContentIds(content: EditableContent) {
+  requireUniqueIds(content.featuredEvents, "featuredEvents");
+  requireUniqueIds(content.calendarEvents, "calendarEvents");
+  requireUniqueIds(content.moments, "moments");
+  requireUniqueIds(content.galleryPhotos, "galleryPhotos");
+}
+
+function requireUniqueIds(items: Array<{ id: string }>, label: string) {
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    if (seen.has(item.id)) throw new Error(`${label} contains a duplicate id: ${item.id}.`);
+    seen.add(item.id);
+  }
+}
+
 export function serializeJson(data: unknown) {
   return `${JSON.stringify(data, null, 2)}\n`;
 }
