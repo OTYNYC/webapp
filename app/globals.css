@@ -983,8 +983,9 @@ section[id],
 
 .home-current-events .featured-event h3 {
   margin: 0 0 0.5rem;
-  font-size: clamp(4rem, 8vw, 5.6rem);
+  font-size: clamp(2rem, 4vw, 5.6rem);
   line-height: 1.05;
+  overflow-wrap: anywhere;
 }
 
 .destination-grid {
