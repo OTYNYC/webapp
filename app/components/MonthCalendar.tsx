@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronIcon } from "./ChevronIcon";
 import { EventAttachmentPreview } from "./EventAttachmentPreview";
 import { formatEventTime, isFeaturedEvent, parseEventDescription, stripFeaturedPrefix } from "../lib/eventDisplay";
@@ -25,6 +25,28 @@ export function MonthCalendar({ events, year, month, monthLabel, prevHref, nextH
   const gridDays = getMonthGridDays(year, month);
   const eventsByDay = groupEventsByDay(events, gridDays);
   const selectedEvents = selectedDateKey ? (eventsByDay[selectedDateKey] ?? []) : [];
+  const eventDays = gridDays.filter((day) => {
+    const dateKey = toDateKey(day);
+
+    return day.getMonth() === month - 1 && (eventsByDay[dateKey]?.length ?? 0) > 0;
+  });
+
+  useEffect(() => {
+    if (!selectedDateKey) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedDateKey(null);
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [selectedDateKey]);
 
   return (
     <div className="month-calendar">
@@ -38,42 +60,73 @@ export function MonthCalendar({ events, year, month, monthLabel, prevHref, nextH
         </Link>
       </div>
 
-      <div className="month-grid-weekdays" aria-hidden="true">
-        {WEEKDAY_LABELS.map((label) => (
-          <span key={label}>{label}</span>
-        ))}
+      <div className="month-calendar-grid-view">
+        <div className="month-grid-weekdays" aria-hidden="true">
+          {WEEKDAY_LABELS.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+
+        <div className="month-grid" role="grid" aria-label={monthLabel}>
+          {gridDays.map((day) => {
+            const dateKey = toDateKey(day);
+            const dayEvents = eventsByDay[dateKey] ?? [];
+            const inMonth = day.getMonth() === month - 1;
+            const isToday = dateKey === todayKey;
+
+            return (
+              <button
+                type="button"
+                key={dateKey}
+                className={`month-day${inMonth ? "" : " outside"}${isToday ? " today" : ""}${dayEvents.length ? " has-events" : ""}`}
+                onClick={() => dayEvents.length > 0 && setSelectedDateKey(dateKey)}
+                disabled={dayEvents.length === 0}
+                aria-label={`${day.getDate()}${dayEvents.length ? `, ${dayEvents.length} event${dayEvents.length > 1 ? "s" : ""}` : ""}`}
+              >
+                <span className="month-day-number">{day.getDate()}</span>
+                {dayEvents.length > 0 && (
+                  <span className="month-day-chips">
+                    {dayEvents.slice(0, 3).map((event) => (
+                      <span className={`month-day-chip${isFeaturedEvent(event.title) ? " featured-title" : ""}`} key={event.id}>
+                        {stripFeaturedPrefix(event.title)}
+                      </span>
+                    ))}
+                    {dayEvents.length > 3 && <span className="month-day-chip more">+{dayEvents.length - 3} more</span>}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="month-grid" role="grid" aria-label={monthLabel}>
-        {gridDays.map((day) => {
-          const dateKey = toDateKey(day);
-          const dayEvents = eventsByDay[dateKey] ?? [];
-          const inMonth = day.getMonth() === month - 1;
-          const isToday = dateKey === todayKey;
+      <div className="month-agenda" aria-label={`${monthLabel} events`}>
+        {eventDays.length > 0 ? (
+          eventDays.map((day) => {
+            const dateKey = toDateKey(day);
+            const dayEvents = eventsByDay[dateKey] ?? [];
 
-          return (
-            <button
-              type="button"
-              key={dateKey}
-              className={`month-day${inMonth ? "" : " outside"}${isToday ? " today" : ""}${dayEvents.length ? " has-events" : ""}`}
-              onClick={() => dayEvents.length > 0 && setSelectedDateKey(dateKey)}
-              disabled={dayEvents.length === 0}
-              aria-label={`${day.getDate()}${dayEvents.length ? `, ${dayEvents.length} event${dayEvents.length > 1 ? "s" : ""}` : ""}`}
-            >
-              <span className="month-day-number">{day.getDate()}</span>
-              {dayEvents.length > 0 && (
-                <span className="month-day-chips">
-                  {dayEvents.slice(0, 3).map((event) => (
-                    <span className={`month-day-chip${isFeaturedEvent(event.title) ? " featured-title" : ""}`} key={event.id}>
+            return (
+              <button className="month-agenda-day" type="button" key={dateKey} onClick={() => setSelectedDateKey(dateKey)}>
+                <span className="month-agenda-date">
+                  <span>{day.toLocaleDateString("en-US", { weekday: "short" })}</span>
+                  <strong>{day.getDate()}</strong>
+                </span>
+                <span className="month-agenda-events">
+                  {dayEvents.slice(0, 2).map((event) => (
+                    <span className={isFeaturedEvent(event.title) ? "featured-title" : undefined} key={event.id}>
                       {stripFeaturedPrefix(event.title)}
                     </span>
                   ))}
-                  {dayEvents.length > 3 && <span className="month-day-chip more">+{dayEvents.length - 3} more</span>}
+                  {dayEvents.length > 2 && <small>+{dayEvents.length - 2} more</small>}
                 </span>
-              )}
-            </button>
-          );
-        })}
+                <ChevronIcon direction="right" />
+              </button>
+            );
+          })
+        ) : (
+          <p className="month-agenda-empty">No events are scheduled for this month.</p>
+        )}
       </div>
 
       {selectedDateKey && (
@@ -85,7 +138,7 @@ export function MonthCalendar({ events, year, month, monthLabel, prevHref, nextH
             aria-labelledby="event-modal-title"
             onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
           >
-            <button className="modal-close" type="button" onClick={() => setSelectedDateKey(null)}>
+            <button className="modal-close" type="button" onClick={() => setSelectedDateKey(null)} aria-label="Close event details">
               Close
             </button>
             <h2 id="event-modal-title">{formatModalDate(selectedDateKey)}</h2>
