@@ -19,6 +19,17 @@ export interface EditableContent {
 
 export const SITE_CONTENT_BLOB_PATH = "content/site-content.json";
 
+// Early gallery entries used an uppercase extension for a handful of lowercase local
+// files. macOS resolves those paths, but Linux deployments do not. Keep these aliases on
+// the read path as well as fixing the fallback JSON so existing Blob content self-heals.
+const GALLERY_PATH_ALIASES: Record<string, string> = {
+  "/assets/gallery/abba_ephrem.JPG": "/assets/gallery/abba_ephrem.jpg",
+  "/assets/gallery/abune_petros.JPG": "/assets/gallery/abune_petros.jpg",
+  "/assets/gallery/lenten_liturgy.JPG": "/assets/gallery/lenten_liturgy.jpg",
+  "/assets/gallery/meskel.JPG": "/assets/gallery/meskel.jpg",
+  "/assets/gallery/social_deacon_christian.JPG": "/assets/gallery/social_deacon_christian.jpg",
+};
+
 export function getFallbackSiteContent(): EditableContent {
   return {
     calendarEvents,
@@ -153,10 +164,14 @@ function validateGalleryPhotos(input: unknown): GalleryPhoto[] {
 
     return {
       id: requireText(record.id, `galleryPhotos[${index}].id`),
-      src: requireImagePath(record.src, `galleryPhotos[${index}].src`),
+      src: normalizeGalleryPath(requireImagePath(record.src, `galleryPhotos[${index}].src`)),
       alt: requireText(record.alt, `galleryPhotos[${index}].alt`),
     };
   });
+}
+
+function normalizeGalleryPath(path: string) {
+  return GALLERY_PATH_ALIASES[path] ?? path;
 }
 
 function requireArray(input: unknown, label: string) {

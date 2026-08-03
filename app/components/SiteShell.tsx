@@ -17,20 +17,54 @@ export function SiteShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [headerHidden, setHeaderHidden] = useState(false);
   const isHome = pathname === "/";
   const solidHeader = !isHome || navOpen || isScrolled;
 
   useEffect(() => {
     setNavOpen(false);
+    setHeaderHidden(false);
   }, [pathname]);
 
   useEffect(() => {
-    const updateHeader = () => setIsScrolled(window.scrollY > 24);
+    const mobileHeader = window.matchMedia("(max-width: 1240px)");
+    let lastScrollY = Math.max(0, window.scrollY);
+    let lastDirection: "up" | "down" | null = null;
+    let directionDistance = 0;
+
+    const updateHeader = () => {
+      const currentScrollY = Math.max(0, window.scrollY);
+      const delta = currentScrollY - lastScrollY;
+
+      setIsScrolled(currentScrollY > 24);
+
+      if (!mobileHeader.matches || currentScrollY < 72) {
+        setHeaderHidden(false);
+        lastDirection = null;
+        directionDistance = 0;
+      } else if (Math.abs(delta) >= 1) {
+        const direction = delta > 0 ? "down" : "up";
+
+        if (direction !== lastDirection) directionDistance = 0;
+        directionDistance += Math.abs(delta);
+
+        // A small travel threshold prevents the bar from flickering when mobile browsers
+        // adjust their own chrome or the page settles by a pixel or two.
+        if (directionDistance >= 12) setHeaderHidden(direction === "down");
+        lastDirection = direction;
+      }
+
+      lastScrollY = currentScrollY;
+    };
 
     updateHeader();
     window.addEventListener("scroll", updateHeader, { passive: true });
+    mobileHeader.addEventListener("change", updateHeader);
 
-    return () => window.removeEventListener("scroll", updateHeader);
+    return () => {
+      window.removeEventListener("scroll", updateHeader);
+      mobileHeader.removeEventListener("change", updateHeader);
+    };
   }, []);
 
   useEffect(() => {
@@ -51,12 +85,18 @@ export function SiteShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
 
-      <header className={`site-header${solidHeader ? " scrolled" : ""}${isHome ? " header-transparent" : ""}`}>
+      <header
+        className={`site-header${solidHeader ? " scrolled" : ""}${isHome ? " header-transparent" : ""}${headerHidden && !navOpen ? " header-hidden" : ""}`}
+      >
         <Link className="home-brand" href="/" aria-label="OTY NYC home">
-          <img className="home-brand-mark" src="/assets/oty-logo-mark.png" alt="OTY NYC" width="515" height="322" />
+          <img className="home-brand-mark" src="/assets/oty-logo-mark.png" alt="" width="515" height="322" />
           <span className="home-brand-text">
             <span className="home-brand-text-full">Orthodox Tewahedo Youth in New York City</span>
-            <span className="home-brand-text-short">OTY NYC</span>
+            <span className="home-brand-text-short">
+              <span>OTY</span>
+              <span className="home-brand-text-divider" aria-hidden="true" />
+              <span>NYC</span>
+            </span>
           </span>
         </Link>
 
