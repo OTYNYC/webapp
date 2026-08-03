@@ -58,7 +58,19 @@ export function GallerySwipe({ photos }: { photos: GalleryPhoto[] }) {
       <div className="gallery-swipe-track" ref={trackRef} onScroll={updateActiveSlide}>
         {photos.map((photo, index) => (
           <figure className="gallery-swipe-slide" key={photo.id} aria-roledescription="slide" aria-label={`${index + 1} of ${photos.length}`}>
-            <img src={photo.src} alt={photo.alt} loading={index === 0 ? "eager" : "lazy"} />
+            <img
+              className="gallery-swipe-backdrop"
+              src={photo.src}
+              alt=""
+              aria-hidden="true"
+              loading={index === 0 ? "eager" : "lazy"}
+            />
+            <img
+              className="gallery-swipe-photo"
+              src={photo.src}
+              alt={photo.alt}
+              loading={index === 0 ? "eager" : "lazy"}
+            />
           </figure>
         ))}
       </div>
