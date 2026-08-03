@@ -16,12 +16,34 @@ const navItems = [
 export function SiteShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
-  const solidHeader = navOpen;
+  const [isScrolled, setIsScrolled] = useState(false);
   const isHome = pathname === "/";
+  const solidHeader = !isHome || navOpen || isScrolled;
 
   useEffect(() => {
     setNavOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const updateHeader = () => setIsScrolled(window.scrollY > 24);
+
+    updateHeader();
+    window.addEventListener("scroll", updateHeader, { passive: true });
+
+    return () => window.removeEventListener("scroll", updateHeader);
+  }, []);
+
+  useEffect(() => {
+    if (!navOpen) return undefined;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setNavOpen(false);
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [navOpen]);
 
   return (
     <>
@@ -51,7 +73,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
           <span />
         </button>
 
-        <nav className={`site-nav${navOpen ? " open" : ""}`} id="site-nav">
+        <nav className={`site-nav${navOpen ? " open" : ""}`} id="site-nav" aria-label="Primary navigation">
           {navItems.map((item) => {
             const isActive = Boolean(item.activePath) && pathname === item.activePath;
 
