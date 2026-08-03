@@ -27,7 +27,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
-    const mobileHeader = window.matchMedia("(max-width: 980px)");
+    const mobileHeader = window.matchMedia("(max-width: 1240px)");
     let lastScrollY = Math.max(0, window.scrollY);
     let lastDirection: "up" | "down" | null = null;
     let directionDistance = 0;
